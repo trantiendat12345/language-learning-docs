@@ -80,7 +80,8 @@ Giá trị thật lấy từ: (a) biến môi trường hệ điều hành thậ
 Repo cá nhân, không có team lớn — quy ước ở mức tối thiểu để lịch sử commit dễ đọc lại sau này:
 
 - **Branch:** `feature/<mô-tả-ngắn>` (vd `feature/deck-clone`), `fix/<mô-tả-ngắn>` cho sửa bug.
-- **Commit message:** theo dạng `<type>: <mô tả>`, `type` ∈ `feat`, `fix`, `refactor`, `docs`, `test`, `chore`. Ví dụ: `feat: add deck clone endpoint`, `fix: streak reset off-by-one khi qua ngày mới`.
+- **Commit message:** theo dạng `[V<số>] <type>: <mô tả>`, `type` ∈ `feat`, `fix`, `refactor`, `docs`, `test`, `chore`. Ví dụ: `[V7] feat: add deck clone endpoint`, `[V8] fix: streak reset off-by-one khi qua ngày mới`.
+- **Tiền tố `[V<số>]`:** đánh số tăng dần tuần tự, **riêng theo từng repo** (`language-learning-backend`, `language-learning-client`, và repo docs mỗi cái có bộ đếm V độc lập, không dùng chung số). Trước khi commit, chạy `git log --oneline -5` ở đúng repo đó để biết số `[V?]` gần nhất rồi lấy số tiếp theo — không tự đoán.
 - **Commit theo từng function/chức năng** — không gộp nhiều chức năng không liên quan vào 1 commit lớn. Các file **bắt buộc phải đi cùng nhau mới build được** (vd 1 class kế thừa class khác vừa tạo trong cùng thay đổi) được gộp vào cùng 1 commit atomic; các phần độc lập nhau tách commit riêng.
 - Mỗi commit nên ứng với 1 thay đổi hoàn chỉnh có thể build được (không commit code dở dang gây lỗi build).
 - **Tuyệt đối không tự ý commit/push** — đây là rule cứng, xem `CLAUDE.md`. Chỉ commit/push khi được yêu cầu rõ ràng cho đúng lần thay đổi đó, kể cả khi đã được cho phép ở lần trước.
