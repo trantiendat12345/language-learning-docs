@@ -19,7 +19,7 @@ Toàn bộ endpoint `/api/admin/**` áp dụng chung các quy tắc sau (áp d�
 **API:** `POST/GET/PUT/DELETE /api/admin/{languages|courses|lessons|vocabularies|grammars|questions}/**`
 
 **Business Rule riêng theo entity:**
-- **Course/Lesson:** chuyển `status` từ `DRAFT` → `PUBLISHED` mới hiển thị cho USER (xem `13_FRS_TC_COURSE_LESSON.md`). Xoá 1 Course không được tự động xoá cứng Lesson con — Lesson con cũng soft-delete theo hoặc bị ẩn tương ứng (xác nhận cascade rule cụ thể khi code, tránh `CascadeType.ALL` tuỳ tiện theo `docs/PROJECT_OVERVIEW.md` mục 5).
+- **Course/Lesson:** chuyển `status` từ `DRAFT` → `PUBLISHED` mới hiển thị cho USER (xem `13_FRS_TC_COURSE_LESSON.md`). Xoá 1 Course không được tự động xoá cứng Lesson con — Lesson con cũng soft-delete theo hoặc bị ẩn tương ứng (xác nhận cascade rule cụ thể khi code, tránh `CascadeType.ALL` tuỳ tiện — xem `CLAUDE.md` mục "Cấm tuyệt đối").
 - **Vocabulary:** Admin chỉ quản lý được Vocabulary hệ thống (`ownerId = null`) — **không** được sửa/xoá Vocabulary custom do User tạo (`ownerId` khác null) qua màn hình quản trị này (đây là dữ liệu cá nhân người dùng).
 - **Question:** gắn với `sourceType/sourceId` — xoá 1 Lesson/Course/Deck không tự động xoá Question liên quan (soft-delete riêng biệt), cần kiểm tra Question "mồ côi" không gây lỗi khi generate Quiz (xem `16_FRS_TC_QUIZ.md`).
 
@@ -61,7 +61,7 @@ Toàn bộ endpoint `/api/admin/**` áp dụng chung các quy tắc sau (áp d�
 | TC-ADMIN-003 | Tạo mới — trùng unique field | vd Course.slug đã tồn tại | Tạo với slug trùng | | 400 | Medium |
 | TC-ADMIN-004 | Sửa bản ghi thành công | Bản ghi tồn tại | `PUT /api/admin/{entity}/{id}` | | 200, cập nhật đúng, `updatedBy`/`updatedAt` thay đổi | High |
 | TC-ADMIN-005 | Sửa bản ghi không tồn tại | | `PUT /api/admin/{entity}/999999` | | 404 | Medium |
-| TC-ADMIN-006 | Xoá (soft delete) bản ghi | Bản ghi tồn tại | `DELETE /api/admin/{entity}/{id}` | | 200, `isDeleted=true`, biến mất khỏi danh sách User/Admin danh sách thường | High |
+| TC-ADMIN-006 | Xoá (soft delete) bản ghi | Bản ghi tồn tại | `DELETE /api/admin/{entity}/{id}` | | 200; bản ghi biến mất khỏi danh sách User/Admin danh sách thường; kiểm tra qua DB (không qua response API, vì Entity không trả trực tiếp — xem `34_DATABASE_VERIFICATION_CHECKLIST.md` mục 2.8): cột `is_deleted=1`, bản ghi vẫn còn trong bảng | High |
 | TC-ADMIN-007 | Xem danh sách sau khi xoá (phía Admin, không filter) | Sau TC-ADMIN-006 | `GET /api/admin/{entity}` | | Bản ghi đã xoá không xuất hiện trong danh sách mặc định | High |
 | TC-ADMIN-008 | USER thường gọi API tạo | Đăng nhập USER (user01) | `POST /api/admin/{entity}` | | 403 Forbidden | Critical |
 | TC-ADMIN-009 | USER thường gọi API xoá | Đăng nhập USER | `DELETE /api/admin/{entity}/{id}` | | 403 Forbidden, dữ liệu không đổi | Critical |

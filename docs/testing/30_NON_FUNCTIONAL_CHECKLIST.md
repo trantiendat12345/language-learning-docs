@@ -39,7 +39,7 @@ Test tối thiểu ở các breakpoint sau (dùng DevTools responsive mode hoặ
 |---|---|
 | **Loading** | Hiển thị Skeleton/Spinner rõ ràng khi đang chờ dữ liệu, không hiển thị màn hình trắng/giật layout khi dữ liệu load xong (tránh layout shift) |
 | **Empty State** | Khi danh sách rỗng (chưa có Deck, chưa có Course nào phù hợp filter, Review Today không có từ...) hiển thị thông điệp + gợi ý hành động rõ ràng, không chỉ để trống trang |
-| **Error State** | Khi API lỗi (mất mạng, 500, timeout) hiển thị thông báo lỗi thân thiện + nút Thử lại, **không** hiển thị stack trace/lỗi kỹ thuật cho người dùng (xem `docs/PROJECT_OVERVIEW.md` mục 10.6) |
+| **Error State** | Khi API lỗi (mất mạng, 500, timeout) hiển thị thông báo lỗi thân thiện + nút Thử lại, **không** hiển thị stack trace/lỗi kỹ thuật cho người dùng (xem `docs/PROJECT_OVERVIEW.md` mục 10.7) |
 | **Success State** | Hành động thành công (lưu Deck, nộp Quiz, đổi mật khẩu...) có phản hồi rõ ràng (Toast/Banner), không im lặng khiến người dùng không chắc đã thành công hay chưa |
 
 ## 4. Form & Validation UI

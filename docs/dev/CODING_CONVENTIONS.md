@@ -97,4 +97,5 @@ Trước khi coi 1 module đã hoàn thành (theo đúng tinh thần "mỗi giai
 - [ ] API mới đã kiểm tra thủ công qua Swagger/Postman ít nhất 1 lần (happy path + 1 case lỗi).
 - [ ] Test Case liên quan ở `docs/testing/FRS_TC_*.md` đã chạy qua ở mức tối thiểu Critical/High (không cần chờ tester riêng nếu code 1 mình, nhưng phải tự chạy).
 - [ ] `npm run lint` (frontend) không có lỗi mới phát sinh.
-- [ ] Nếu trong lúc làm có việc phát sinh ngoài kế hoạch ban đầu và đã được đồng ý áp dụng (vd thêm 1 config/dependency chưa có trong roadmap) — tài liệu `.md` liên quan (thường `docs/PROJECT_OVERVIEW.md` phần roadmap, hoặc file trong `docs/dev/`) đã được cập nhật để khớp đúng với code thực tế, xem `CLAUDE.md` mục "Khi phát sinh việc ngoài kế hoạch".
+- [ ] Nếu trong lúc làm có việc phát sinh ngoài kế hoạch ban đầu và đã được đồng ý áp dụng (vd thêm 1 config/dependency chưa có trong roadmap) — tài liệu `.md` liên quan đã được cập nhật để khớp đúng với code thực tế.
+- [ ] `docs/PROJECT_OVERVIEW.md` mục 12 (roadmap) đã đổi trạng thái Giai đoạn vừa xong thành ✅, mục 13 (Bước tiếp theo) đã trỏ sang bước kế tiếp — xem `CLAUDE.md` mục "Cập nhật tài liệu song song với code".

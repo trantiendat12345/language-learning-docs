@@ -41,6 +41,7 @@ Chi tiết đầy đủ + lý do từng quyết định: `docs/PROJECT_OVERVIEW.
 
 - **KHÔNG BAO GIỜ tự ý `git add`/`commit`/`push`** khi chưa được người dùng yêu cầu rõ ràng cho đúng lần thay đổi đó — kể cả khi thay đổi nhỏ/an toàn, kể cả khi đã được cho phép ở lần trước đó. Mỗi lần commit/push đều phải hỏi lại.
 - Khi được yêu cầu commit: **chia commit theo từng function/chức năng độc lập**, chỉ gộp chung những file bắt buộc phải đi cùng nhau mới build được. Liệt kê trước dự kiến chia commit thế nào để người dùng duyệt trước khi thực hiện. Chi tiết: `docs/dev/CODING_CONVENTIONS.md` mục 4.
+- **Mọi commit message có tiền tố `[V<số>]`** trước `<type>: <mô tả>` (vd `[V7] feat: add deck clone endpoint`), đánh số tăng dần **riêng theo từng repo** — chạy `git log --oneline -5` ở đúng repo trước khi commit để lấy đúng số tiếp theo, không tự đoán.
 
 ## Cấm tuyệt đối
 
@@ -88,6 +89,11 @@ Chạy qua checklist Definition of Done ở `docs/dev/CODING_CONVENTIONS.md` m�
 
 Không đổi kiến trúc/kiến quyết đã chốt (package structure, entity design, D1–D12) mà không giải thích lý do và được xác nhận — kể cả khi cách khác "gọn hơn". Nếu phát hiện vấn đề với thiết kế hiện tại, nêu ra và đề xuất, không tự ý sửa `docs/PROJECT_OVERVIEW.md` rồi code theo hướng mới trong cùng 1 lượt.
 
-## Khi phát sinh việc ngoài kế hoạch
+## Cập nhật tài liệu song song với code
 
-Nếu trong lúc code phát sinh 1 việc không nằm trong kế hoạch ban đầu (vd cần thêm config/dependency mới để phần đang làm chạy được) — giải thích rõ lý do và xin xác nhận trước khi làm, như với mọi thay đổi kiến trúc khác. Ngay sau khi được đồng ý và đã áp dụng vào code, **cập nhật luôn tài liệu `.md` liên quan trong cùng lượt** (thường là `docs/PROJECT_OVERVIEW.md` phần roadmap/kiến trúc, hoặc file tương ứng trong `docs/dev/`) — không để tài liệu lệch khỏi code thực tế, và không hoãn việc cập nhật sang lượt sau.
+Hai trường hợp bắt buộc cập nhật `.md` liên quan **ngay trong cùng lượt**, không hoãn sang lượt sau:
+
+1. **Phát sinh việc ngoài kế hoạch** — nếu trong lúc code phát sinh 1 việc không nằm trong kế hoạch ban đầu (vd cần thêm config/dependency mới để phần đang làm chạy được), giải thích rõ lý do và xin xác nhận trước khi làm. Sau khi được đồng ý và đã áp dụng vào code, cập nhật ngay tài liệu liên quan (thường `docs/PROJECT_OVERVIEW.md` phần roadmap/kiến trúc, hoặc file trong `docs/dev/`).
+2. **Hoàn thành 1 phần việc đúng kế hoạch** (dù không có gì phát sinh) — ngay khi 1 module/giai đoạn code xong, chạy được, đã test: cập nhật trạng thái trong `docs/PROJECT_OVERVIEW.md` mục 12 (roadmap, đổi ⏳ → ✅) và mục 13 (Bước tiếp theo, trỏ sang bước kế tiếp), không để mục "Bước tiếp theo" đứng yên mô tả công việc đã xong như chưa bắt đầu.
+
+Không tự tin rằng tài liệu "chắc vẫn đúng" — trước khi báo hoàn thành với người dùng, chủ động rà lại các file `.md` bị ảnh hưởng bởi thay đổi vừa làm.
