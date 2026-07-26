@@ -222,7 +222,7 @@ Các entity ở mục 1–2–3 (trừ log/transaction) đều có thêm các fi
 | createdBy | bigint (FK User) | Lấy từ SecurityContext |
 | updatedAt | datetime | Tự động cập nhật mỗi lần sửa |
 | updatedBy | bigint (FK User) | |
-| isDeleted | boolean | Default false — filter mặc định trong mọi query danh sách |
+| deleted | boolean | Cột DB `is_deleted`, default false — filter mặc định trong mọi query danh sách. Field Java tên `deleted` (không phải `isDeleted`) do quy ước Lombok với field boolean, nhưng getter sinh ra vẫn là `isDeleted()` |
 | deletedAt | datetime, nullable | |
 | deletedBy | bigint, nullable | |
 

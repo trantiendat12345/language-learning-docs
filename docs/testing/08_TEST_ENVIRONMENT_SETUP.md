@@ -68,7 +68,7 @@ cd language-learning-backend
 ```
 Kiểm tra backend đã chạy: mở `http://localhost:8080/actuator/health` (nếu có bật Actuator) hoặc gọi thử 1 API public, vd `GET http://localhost:8080/api/languages`.
 
-**Swagger UI** (sau khi thêm springdoc-openapi theo roadmap Giai đoạn 1): `http://localhost:8080/swagger-ui.html` hoặc `/swagger-ui/index.html` — dùng để test API thủ công không cần Postman.
+**Swagger UI** (đã có sẵn từ Giai đoạn 1): `http://localhost:8080/swagger-ui/index.html` (mở công khai, không cần token) — dùng để test API thủ công không cần Postman. Danh sách API sẽ trống cho tới khi có Controller đầu tiên (Giai đoạn 2). JSON đặc tả: `http://localhost:8080/v3/api-docs`.
 
 ## 6. Chạy Frontend
 

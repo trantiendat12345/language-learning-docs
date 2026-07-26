@@ -36,13 +36,13 @@ Hai phương pháp học song song:
 
 ---
 
-## 3. Việc cần sửa ngay trước khi code (kiểm tra source hiện tại)
+## 3. Bảo mật cấu hình — đã xử lý ở Giai đoạn 1
 
-Repo hiện tại (`language-learning-backend`) chỉ có skeleton mặc định, nhưng `application.properties` đã lộ **JWT secret dạng plaintext** và đã được commit vào git. Trước khi bắt đầu Giai đoạn 1:
+Repo lúc bắt đầu dự án (`language-learning-backend`) chỉ có skeleton mặc định, và `application.properties` từng lộ **JWT secret dạng plaintext** đã bị commit vào git. Đã xử lý xong trong Giai đoạn 1:
 
-1. Chuyển `spring.datasource.password`, `jwt.secret` sang biến môi trường (`${DB_PASSWORD}`, `${JWT_SECRET}`), dùng file `.env`/`application-local.properties` (gitignored) cho local dev.
-2. Xoay vòng (thay mới) JWT secret hiện tại vì nó đã nằm trong lịch sử git.
-3. `pom.xml` đã có sẵn đúng dependency (JPA, Security, Validation, MySQL, Lombok, JJWT) — chỉ cần bổ sung `springdoc-openapi` (Swagger) và `mapstruct`.
+1. ✅ `spring.datasource.url/username/password`, `jwt.secret` đã chuyển sang biến môi trường (`${DB_URL}`, `${DB_PASSWORD}`, `${JWT_SECRET}`...) — giá trị thật đặt trong `application-local.properties` (gitignored, profile `local` bật mặc định). Xem `docs/dev/CODING_CONVENTIONS.md` mục 3.
+2. ✅ JWT secret đã được xoay vòng — không còn dùng lại giá trị cũ từng lộ trong lịch sử git.
+3. ✅ Đã bổ sung `springdoc-openapi` (Swagger) và `mapstruct` vào `pom.xml`.
 
 ---
 
@@ -473,7 +473,8 @@ erDiagram
 com.languagelearning.language_learning_backend
 ├── common/
 │   ├── entity/        (BaseEntity, AuditableEntity)
-│   ├── dto/            (ApiResponse<T>, PageResponse<T>)
+│   ├── dto/            (ApiResponse<T>, PageResponse<T>, ApiErrorResponse)
+│   ├── constant/        (ErrorCode, ErrorMessage, CommonMessage - message/error code không hardcode rải rác trong code)
 │   ├── enums/          (Status, Difficulty...)
 │   └── util/
 ├── config/              (SecurityConfig, CorsConfig, OpenApiConfig, JpaAuditingConfig)
@@ -526,7 +527,7 @@ Module đơn giản (vd `favorite/`) chỉ cần `controller/service/repository/
 - `@PreAuthorize("hasRole('ADMIN')")` cho mọi endpoint `/api/admin/**`.
 - List API dùng `Pageable`, trả `PageResponse<T>` bọc trong `ApiResponse`.
 
-### 7.3 `ApiResponse<T>`
+### 7.3 `ApiResponse<T>` — đã triển khai ở Giai đoạn 1
 
 ```java
 public class ApiResponse<T> {
@@ -534,16 +535,19 @@ public class ApiResponse<T> {
     private String message;
     private T data;
 
-    public static <T> ApiResponse<T> success(T data) { ... }
+    public static <T> ApiResponse<T> success(T data) { ... }         // message mặc định CommonMessage.SUCCESS
     public static <T> ApiResponse<T> success(String message, T data) { ... }
 }
 
 public class ApiErrorResponse {
     private int code;
+    private String errorCode;   // vd RESOURCE_NOT_FOUND - xem docs/dev/ERROR_CODE_CATALOG.md
     private String message;
     private List<FieldError> errors;
 }
 ```
+
+Message/errorCode không hardcode trực tiếp trong các class trên — lấy từ `common/constant/CommonMessage`, `ErrorCode`, `ErrorMessage` (xem `docs/dev/CODING_CONVENTIONS.md` mục 1.2).
 
 ---
 
@@ -635,18 +639,18 @@ Access token lưu in-memory (Context), **không** localStorage. Refresh token n�
 
 ## 12. Roadmap theo giai đoạn
 
-| Giai đoạn | Nội dung |
-|---|---|
-| 1. Setup | BaseEntity/AuditableEntity, ApiResponse, GlobalExceptionHandler, env vars, cấu trúc thư mục FE/BE, Swagger, MapStruct, SecurityConfig tối thiểu[^1] |
-| 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE |
-| 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning |
-| 4. Quiz | Question, QuestionOption, generate động theo `sourceType`, QuizAttempt, chấm điểm, lịch sử |
-| 5. Deck | Deck, DeckCard, Public/Private, Clone, Flashcard learning modes |
-| 6. Spaced Repetition | UserVocabularyProgress, ReviewLog, SM-2, Review Today |
-| 7. Progress & Gamification | CourseEnrollment, LessonProgress, UserDailyActivity, UserStreak, XpLog, Achievement, Leaderboard |
-| 8. Engagement | Favorite, ActivityHistory, Notification, StudyReminder, Search |
-| 9. Admin & Analytics | Admin Dashboard, thống kê User/Course/Learning |
-| 10. Production | Testing, Flyway/Liquibase, Performance, Security hardening, Docker, Logging, Monitoring |
+| Giai đoạn | Nội dung | Trạng thái |
+|---|---|---|
+| 1. Setup | BaseEntity/AuditableEntity, ApiResponse, GlobalExceptionHandler, env vars, cấu trúc thư mục FE/BE, Swagger, MapStruct, SecurityConfig tối thiểu[^1] | ✅ Hoàn thành |
+| 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE | ⏳ Chưa bắt đầu |
+| 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning | ⏳ Chưa bắt đầu |
+| 4. Quiz | Question, QuestionOption, generate động theo `sourceType`, QuizAttempt, chấm điểm, lịch sử | ⏳ Chưa bắt đầu |
+| 5. Deck | Deck, DeckCard, Public/Private, Clone, Flashcard learning modes | ⏳ Chưa bắt đầu |
+| 6. Spaced Repetition | UserVocabularyProgress, ReviewLog, SM-2, Review Today | ⏳ Chưa bắt đầu |
+| 7. Progress & Gamification | CourseEnrollment, LessonProgress, UserDailyActivity, UserStreak, XpLog, Achievement, Leaderboard | ⏳ Chưa bắt đầu |
+| 8. Engagement | Favorite, ActivityHistory, Notification, StudyReminder, Search | ⏳ Chưa bắt đầu |
+| 9. Admin & Analytics | Admin Dashboard, thống kê User/Course/Learning | ⏳ Chưa bắt đầu |
+| 10. Production | Testing, Flyway/Liquibase, Performance, Security hardening, Docker, Logging, Monitoring | ⏳ Chưa bắt đầu |
 
 Mỗi module triển khai theo quy trình 11 bước: phân tích → entity → quan hệ DB → API → Request DTO → Response DTO → Repository → Service → Controller → Security → code, kèm hướng dẫn test Postman/FE sau khi hoàn thành.
 
@@ -656,8 +660,6 @@ Mỗi module triển khai theo quy trình 11 bước: phân tích → entity →
 
 ## 13. Bước tiếp theo
 
-Bắt đầu **Giai đoạn 1 — Project Setup**:
-1. Sửa `application.properties` → biến môi trường, xoay JWT secret.
-2. Tạo `common/entity/BaseEntity` + `AuditableEntity`, `common/dto/ApiResponse`, `exception/GlobalExceptionHandler`.
-3. Thêm Swagger/OpenAPI (`springdoc-openapi-starter-webmvc-ui`) và MapStruct vào `pom.xml`.
-4. Dựng cấu trúc thư mục frontend theo mục 8.
+**Giai đoạn 1 — Project Setup: ✅ Hoàn thành.** Đã có: biến môi trường + JWT secret xoay vòng, `BaseEntity`/`AuditableEntity` + JPA Auditing, `common/constant` (ErrorCode/ErrorMessage/CommonMessage), bộ Exception nghiệp vụ + `GlobalExceptionHandler`, `ApiResponse`/`PageResponse`/`ApiErrorResponse`, Swagger/OpenAPI + MapStruct trong `pom.xml`, `SecurityConfig` tối thiểu, cấu trúc thư mục frontend + axios client + routing skeleton. Toàn bộ đã build/chạy/test thật, đã commit và push lên GitHub (xem lịch sử commit từng repo).
+
+Bước tiếp theo: **Giai đoạn 2 — Authentication** (mục 12) — User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE. Triển khai theo đúng quy trình 11 bước ở mục 12.
