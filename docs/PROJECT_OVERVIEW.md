@@ -637,7 +637,7 @@ Access token lưu in-memory (Context), **không** localStorage. Refresh token n�
 
 | Giai đoạn | Nội dung |
 |---|---|
-| 1. Setup | BaseEntity/AuditableEntity, ApiResponse, GlobalExceptionHandler, env vars, cấu trúc thư mục FE/BE, Swagger, MapStruct |
+| 1. Setup | BaseEntity/AuditableEntity, ApiResponse, GlobalExceptionHandler, env vars, cấu trúc thư mục FE/BE, Swagger, MapStruct, SecurityConfig tối thiểu[^1] |
 | 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE |
 | 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning |
 | 4. Quiz | Question, QuestionOption, generate động theo `sourceType`, QuizAttempt, chấm điểm, lịch sử |
@@ -649,6 +649,8 @@ Access token lưu in-memory (Context), **không** localStorage. Refresh token n�
 | 10. Production | Testing, Flyway/Liquibase, Performance, Security hardening, Docker, Logging, Monitoring |
 
 Mỗi module triển khai theo quy trình 11 bước: phân tích → entity → quan hệ DB → API → Request DTO → Response DTO → Repository → Service → Controller → Security → code, kèm hướng dẫn test Postman/FE sau khi hoàn thành.
+
+[^1]: Phát sinh ngoài kế hoạch ban đầu khi triển khai thực tế: Spring Security (đã có sẵn trong `pom.xml` từ đầu) tự động khoá mọi endpoint kể cả Swagger UI khi chưa có `SecurityConfig` nào — phải thêm 1 config tối thiểu (chỉ `permitAll` cho `/swagger-ui/**`, `/v3/api-docs/**`) để Swagger dùng được. Sẽ được thay thế bằng JWT filter chain đầy đủ ở Giai đoạn 2.
 
 ---
 

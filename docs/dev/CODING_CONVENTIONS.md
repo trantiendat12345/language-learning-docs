@@ -25,11 +25,18 @@
 - DTO không bao giờ chứa logic nghiệp vụ — chỉ field + validation annotation (`@NotNull`, `@Size`...).
 - Constructor injection cho mọi dependency (không dùng `@Autowired` trên field) — dùng Lombok `@RequiredArgsConstructor`.
 - Không dùng `System.out.println` — dùng SLF4J (`@Slf4j` của Lombok).
+- **Message hiển thị cho người dùng (exception message, response message, validation message...) không hardcode trực tiếp trong code** — đặt trong class hằng số riêng dưới `common/constant/` (vd `ErrorMessage.java`, `ErrorCode.java`, `CommonMessage.java`). Mục đích: sửa nội dung message chỉ cần sửa 1 chỗ, tránh copy-paste sai lệch giữa các nơi dùng cùng 1 message, và tránh gõ nhầm `errorCode` không khớp `docs/dev/ERROR_CODE_CATALOG.md`.
 
 ### 1.3 Định dạng code
 
 - Chuẩn format mặc định của IntelliJ/Java (indent 4 space). Nếu sau này thêm Checkstyle/Spotless, cấu hình sẽ ghi bổ sung tại đây.
 - Import: không dùng wildcard import (`import x.y.*`).
+
+### 1.4 Comment & Javadoc
+
+- Mọi class và mọi method `public` nên có comment mô tả **class/method đó dùng để làm gì** — không viết comment kiểu chỉ trỏ sang tài liệu khác mà không giải thích gì tại chỗ (vd tránh `// xem docs/xxx.md` là toàn bộ nội dung comment — phải mô tả trước, có thể trỏ thêm tài liệu tham khảo sau nếu cần).
+- Comment viết tiếng Việt có dấu đầy đủ (pom.xml đã cấu hình `UTF-8`, không còn rủi ro lỗi encoding).
+- Không bắt buộc comment cho method `private` đơn giản, hiển nhiên qua tên hàm.
 
 ## 2. Frontend (React / TypeScript)
 
@@ -74,7 +81,9 @@ Repo cá nhân, không có team lớn — quy ước ở mức tối thiểu đ�
 
 - **Branch:** `feature/<mô-tả-ngắn>` (vd `feature/deck-clone`), `fix/<mô-tả-ngắn>` cho sửa bug.
 - **Commit message:** theo dạng `<type>: <mô tả>`, `type` ∈ `feat`, `fix`, `refactor`, `docs`, `test`, `chore`. Ví dụ: `feat: add deck clone endpoint`, `fix: streak reset off-by-one khi qua ngày mới`.
+- **Commit theo từng function/chức năng** — không gộp nhiều chức năng không liên quan vào 1 commit lớn. Các file **bắt buộc phải đi cùng nhau mới build được** (vd 1 class kế thừa class khác vừa tạo trong cùng thay đổi) được gộp vào cùng 1 commit atomic; các phần độc lập nhau tách commit riêng.
 - Mỗi commit nên ứng với 1 thay đổi hoàn chỉnh có thể build được (không commit code dở dang gây lỗi build).
+- **Tuyệt đối không tự ý commit/push** — đây là rule cứng, xem `CLAUDE.md`. Chỉ commit/push khi được yêu cầu rõ ràng cho đúng lần thay đổi đó, kể cả khi đã được cho phép ở lần trước.
 
 ## 5. Definition of Done (mỗi module/tính năng)
 
@@ -87,3 +96,4 @@ Trước khi coi 1 module đã hoàn thành (theo đúng tinh thần "mỗi giai
 - [ ] API mới đã kiểm tra thủ công qua Swagger/Postman ít nhất 1 lần (happy path + 1 case lỗi).
 - [ ] Test Case liên quan ở `docs/testing/FRS_TC_*.md` đã chạy qua ở mức tối thiểu Critical/High (không cần chờ tester riêng nếu code 1 mình, nhưng phải tự chạy).
 - [ ] `npm run lint` (frontend) không có lỗi mới phát sinh.
+- [ ] Nếu trong lúc làm có việc phát sinh ngoài kế hoạch ban đầu và đã được đồng ý áp dụng (vd thêm 1 config/dependency chưa có trong roadmap) — tài liệu `.md` liên quan (thường `docs/PROJECT_OVERVIEW.md` phần roadmap, hoặc file trong `docs/dev/`) đã được cập nhật để khớp đúng với code thực tế, xem `CLAUDE.md` mục "Khi phát sinh việc ngoài kế hoạch".

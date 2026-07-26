@@ -37,6 +37,11 @@ Website học ngoại ngữ (MVP: tiếng Anh, kiến trúc mở rộng đa ngô
 
 Chi tiết đầy đủ + lý do từng quyết định: `docs/PROJECT_OVERVIEW.md` mục 2 (D1–D12).
 
+## Git — quy tắc tuyệt đối
+
+- **KHÔNG BAO GIỜ tự ý `git add`/`commit`/`push`** khi chưa được người dùng yêu cầu rõ ràng cho đúng lần thay đổi đó — kể cả khi thay đổi nhỏ/an toàn, kể cả khi đã được cho phép ở lần trước đó. Mỗi lần commit/push đều phải hỏi lại.
+- Khi được yêu cầu commit: **chia commit theo từng function/chức năng độc lập**, chỉ gộp chung những file bắt buộc phải đi cùng nhau mới build được. Liệt kê trước dự kiến chia commit thế nào để người dùng duyệt trước khi thực hiện. Chi tiết: `docs/dev/CODING_CONVENTIONS.md` mục 4.
+
 ## Cấm tuyệt đối
 
 - `CascadeType.ALL` tuỳ tiện (đánh giá cascade cụ thể theo từng quan hệ).
@@ -45,6 +50,8 @@ Chi tiết đầy đủ + lý do từng quyết định: `docs/PROJECT_OVERVIEW.
 - Tạo Entity mới trùng lặp khi đã có entity tương tự — kiểm tra `docs/PROJECT_OVERVIEW.md` mục 6 (ERD) trước khi thêm entity.
 - Để lại `TODO`/pseudo-code khi báo cáo 1 phần việc là "xong".
 - Bỏ qua `docs/dev/ERROR_CODE_CATALOG.md` khi thêm exception mới — luôn thêm dòng tương ứng vào catalog cùng lúc.
+- Hardcode message/error code trực tiếp trong code — đặt trong class hằng số ở `common/constant/` (xem `docs/dev/CODING_CONVENTIONS.md` mục 1.2).
+- Viết comment class/method chỉ trỏ sang tài liệu ngoài mà không mô tả gì tại chỗ — xem `docs/dev/CODING_CONVENTIONS.md` mục 1.4.
 
 ## Backend
 
@@ -80,3 +87,7 @@ Chạy qua checklist Definition of Done ở `docs/dev/CODING_CONVENTIONS.md` m�
 ## Không tự ý thay đổi
 
 Không đổi kiến trúc/kiến quyết đã chốt (package structure, entity design, D1–D12) mà không giải thích lý do và được xác nhận — kể cả khi cách khác "gọn hơn". Nếu phát hiện vấn đề với thiết kế hiện tại, nêu ra và đề xuất, không tự ý sửa `docs/PROJECT_OVERVIEW.md` rồi code theo hướng mới trong cùng 1 lượt.
+
+## Khi phát sinh việc ngoài kế hoạch
+
+Nếu trong lúc code phát sinh 1 việc không nằm trong kế hoạch ban đầu (vd cần thêm config/dependency mới để phần đang làm chạy được) — giải thích rõ lý do và xin xác nhận trước khi làm, như với mọi thay đổi kiến trúc khác. Ngay sau khi được đồng ý và đã áp dụng vào code, **cập nhật luôn tài liệu `.md` liên quan trong cùng lượt** (thường là `docs/PROJECT_OVERVIEW.md` phần roadmap/kiến trúc, hoặc file tương ứng trong `docs/dev/`) — không để tài liệu lệch khỏi code thực tế, và không hoãn việc cập nhật sang lượt sau.
