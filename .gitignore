@@ -1,0 +1,5 @@
+# Backend and frontend are separate git repositories, tracked independently.
+language-learning-backend/
+language-learning-client/
+
+.DS_Store
