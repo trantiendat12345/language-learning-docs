@@ -29,7 +29,7 @@ Hai phương pháp học song song:
 | D6 | Không có entity `Flashcard` riêng — "Flashcard" chỉ là **chế độ hiển thị** (front/back) của `Vocabulary` thông qua `DeckCard`/`LessonVocabulary`. | Tránh entity trùng dữ liệu với `Vocabulary`. |
 | D7 | RBAC: thiết kế schema `role` / `permission` / `role_permission` đầy đủ ngay từ đầu, nhưng logic MVP chỉ check `hasRole('ADMIN'/'USER')`. | Mở rộng permission chi tiết sau này (Editor, Moderator...) chỉ cần thêm dữ liệu + đổi `hasRole` → `hasAuthority`, không phải sửa schema (quan trọng vì không dùng Flyway). |
 | D8 | Thêm bảng `XpLog` (append-only ledger: `userId, amount, reason, earnedAt`) bên cạnh cột `User.xp` (denormalized, cộng dồn). | Leaderboard Weekly/Monthly cần `SUM(amount) WHERE earned_at BETWEEN ...` — không thể làm được nếu chỉ có một cột XP cộng dồn all-time. |
-| D9 | Chia 2 nhóm entity: **Content/Master data** (User, Course, Lesson, Vocabulary, Deck...) dùng `AuditableEntity` đầy đủ (soft-delete có ý nghĩa); **Log/Transaction data** (`XpLog`, `ReviewLog`, `ActivityHistory`, `QuizAttemptAnswer`) chỉ có `id + createdAt`, không audit/soft-delete. | Log tần suất cao mà mang đủ audit fields sẽ phình bảng và bắt buộc filter `is_deleted` trên hàng triệu dòng không cần thiết. |
+| D9 | Chia 2 nhóm entity: **Content/Master data** (User, Course, Lesson, Vocabulary, Deck...) dùng `AuditableEntity` đầy đủ (soft-delete có ý nghĩa); **Log/Transaction data** (`XpLog`, `ReviewLog`, `ActivityHistory`, `QuizAttemptAnswer`, `RefreshToken`, `VerificationToken`) chỉ kế thừa `BaseEntity` (chỉ có `id`), không audit/soft-delete — entity con tự thêm field thời gian riêng nếu nghiệp vụ cần (vd `earnedAt` ở `XpLog`, `expiresAt` ở `RefreshToken`/`VerificationToken`), không có `createdAt` mặc định từ base class. | Log tần suất cao mà mang đủ audit fields sẽ phình bảng và bắt buộc filter `is_deleted` trên hàng triệu dòng không cần thiết. |
 | D10 | `User` có cột `timezone`. Mọi hoạt động ghi vào `UserDailyActivity.activityDate` (`LocalDate`) tính theo timezone của user, không theo UTC server. Streak cập nhật **theo sự kiện** (lúc ghi activity), không chạy cron quét toàn bộ user mỗi đêm. | Tránh bug kinh điển lệch ngày giữa các user ở nhiều múi giờ; tránh batch job nặng. |
 | D11 | MVP: `Vocabulary.meaning`/`exampleTranslation` cố định tiếng Việt, không có bảng dịch đa chiều theo `nativeLanguage`. | Đúng nhu cầu thực tế hiện tại; bảng `VocabularyTranslation` đa ngôn ngữ hiển thị là over-engineering nếu chưa có nhu cầu — để Phase 2/3. |
 | D12 | `Favorite` và `ActivityHistory` dùng generic `targetType/targetId` thay vì bảng riêng cho từng loại (Course/Deck/Vocabulary). | Thêm loại mới (vd Favorite Grammar) không cần migration; đánh đổi mất FK constraint DB thật, validate ở Service layer. |
@@ -138,6 +138,8 @@ erDiagram
         datetime used_at
     }
 ```
+
+> **Lưu ý:** `native_language_id`/`learning_language_id` và quan hệ tới `LANGUAGE` ở trên là thiết kế cho **Giai đoạn 3** (khi entity `Language` tồn tại) — **chưa có trong code hiện tại**. `User.java` hiện chưa có 2 cột này (xem comment trong entity + `docs/dev/SCHEMA_CHANGE_LOG.md`).
 
 ### 6.2 Content: Language → Course → Lesson → Vocabulary/Grammar
 
@@ -569,23 +571,25 @@ src/
 └── styles/
 ```
 
-Access token lưu in-memory (Context), **không** localStorage. Refresh token nên là httpOnly cookie do backend set. Axios interceptor: 401 → thử refresh 1 lần → thất bại → clear context → redirect `/login`.
+Access token lưu in-memory (Context), **không** localStorage. Refresh token là httpOnly cookie do backend set (đã implement ở `POST /api/auth/login`, xem mục 9) — Frontend khi gọi API phải bật `withCredentials: true` (axios) để trình duyệt gửi kèm cookie, và origin FE phải khớp `FRONTEND_URL` backend cấu hình (`CorsConfig`, `allowCredentials` bắt buộc đi cùng origin cụ thể, không dùng `*`). Axios interceptor: 401 → thử refresh 1 lần → thất bại → clear context → redirect `/login`.
 
 ---
 
 ## 9. REST API chính
 
+Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thống, không phải danh sách "đã xong" — API nào thực sự đã implement được đánh dấu ✅ ngay trong cột Ghi chú, còn lại là kế hoạch (xem mục 12/13 để biết giai đoạn nào đang làm).
+
 | Method | Endpoint | Ghi chú |
 |---|---|---|
-| POST | `/api/auth/register` | public |
-| POST | `/api/auth/login` | public |
-| POST | `/api/auth/refresh-token` | public, đọc refresh token từ cookie |
-| POST | `/api/auth/logout` | protected, revoke refresh token |
-| POST | `/api/auth/forgot-password` | public |
-| POST | `/api/auth/reset-password` | public |
-| GET | `/api/auth/verify-email` | public |
-| GET/PUT | `/api/users/me` | protected |
-| PUT | `/api/users/me/password` | protected |
+| POST | `/api/auth/register` | public — ✅ đã implement |
+| POST | `/api/auth/login` | public — ✅ đã implement, trả `accessToken` trong JSON body + set `refreshToken` qua cookie httpOnly (`Set-Cookie`, path `/api/auth`) |
+| POST | `/api/auth/refresh-token` | public, đọc refresh token từ cookie — ⏳ chưa implement |
+| POST | `/api/auth/logout` | protected, revoke refresh token — ⏳ chưa implement |
+| POST | `/api/auth/forgot-password` | public — ⏳ chưa implement |
+| POST | `/api/auth/reset-password` | public — ⏳ chưa implement |
+| GET | `/api/auth/verify-email` | public — ⏳ chưa implement |
+| GET/PUT | `/api/users/me` | protected — ⏳ chưa implement |
+| PUT | `/api/users/me/password` | protected — ⏳ chưa implement |
 | GET | `/api/languages` | public |
 | GET/POST/PUT/DELETE | `/api/admin/languages/**` | admin |
 | GET | `/api/courses?languageId=&level=&keyword=&page=` | public, pagination |

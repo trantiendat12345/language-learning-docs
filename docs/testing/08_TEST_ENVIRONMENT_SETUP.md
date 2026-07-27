@@ -93,13 +93,13 @@ Xem danh sách đầy đủ tài khoản/dữ liệu mẫu tại `09_TEST_DATA.m
 | Postman | Test luồng nhiều bước cần lưu biến (vd lưu Access Token sau Login để dùng cho request tiếp theo), test case phức tạp cần lưu lại (collection) để chạy lại nhiều lần |
 
 Gợi ý thiết lập Postman:
-1. Tạo **Environment** với biến `baseUrl = http://localhost:8080`, `accessToken`, `refreshToken`.
-2. Ở request Login, dùng tab **Tests** để tự động lưu token vào biến environment, ví dụ:
+1. Tạo **Environment** với biến `baseUrl = http://localhost:8080`, `accessToken`.
+2. Ở request Login, dùng tab **Tests** để tự động lưu access token vào biến environment, ví dụ:
    ```javascript
    const res = pm.response.json();
    pm.environment.set("accessToken", res.data.accessToken);
-   pm.environment.set("refreshToken", res.data.refreshToken);
    ```
+   `refreshToken` **không** nằm trong JSON response (`data`) — backend set qua header `Set-Cookie` httpOnly (xem `docs/PROJECT_OVERVIEW.md` mục 8/9), Postman tự lưu vào Cookie Jar của workspace (bật **Automatically follow redirects** + **Send cookies** trong Settings), không cần lưu thủ công vào biến environment.
 3. Ở các request `protected`, thêm header `Authorization: Bearer {{accessToken}}`.
 
 ## 9. Reset môi trường trước một phiên test quan trọng

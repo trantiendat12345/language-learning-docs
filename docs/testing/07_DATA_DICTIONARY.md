@@ -18,8 +18,8 @@
 | birthday | date | ❌ | Nullable | |
 | gender | varchar(20) | ❌ | Nullable | |
 | country | varchar(100) | ❌ | Nullable | |
-| nativeLanguageId | bigint (FK Language) | ❌ | Nullable | |
-| learningLanguageId | bigint (FK Language) | ❌ | Nullable | Ngôn ngữ đang học chính hiện tại |
+| nativeLanguageId | bigint (FK Language) | ❌ | Nullable | ⏳ **Chưa có trong code** — thiết kế cho Giai đoạn 3 khi entity `Language` tồn tại, xem `docs/dev/SCHEMA_CHANGE_LOG.md` |
+| learningLanguageId | bigint (FK Language) | ❌ | Nullable | ⏳ **Chưa có trong code** — tương tự, Ngôn ngữ đang học chính hiện tại (Giai đoạn 3) |
 | currentLevel | varchar(20) | ❌ | Nullable | vd A1/B2 |
 | xp | int | — | Default 0, ≥ 0 | Denormalized, phải khớp SUM(XpLog) — xem `04_BUSINESS_RULES_GLOBAL.md` mục 1 |
 | currentStreak | int | — | Default 0, ≥ 0 | |

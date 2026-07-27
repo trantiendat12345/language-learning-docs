@@ -74,7 +74,7 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 
 ## 4. Nguyên tắc bắt buộc
 
-- `GlobalExceptionHandler` là nơi **duy nhất** map exception → response lỗi — Controller không tự try/catch để tự trả lỗi riêng lẻ.
+- `GlobalExceptionHandler` là nơi **duy nhất** map exception → response lỗi cho mọi thứ chạm tới Controller/Service — Controller không tự try/catch để tự trả lỗi riêng lẻ. Ngoại lệ bắt buộc: lỗi xác thực xảy ra ngay ở Security Filter Chain (trước khi request tới `DispatcherServlet`) không đi qua được `@RestControllerAdvice`, nên `JwtAuthenticationEntryPoint` (401) và `JwtAccessDeniedHandler` (403) tự dựng `ApiErrorResponse` cùng cấu trúc — xem `language-learning-backend/.../security/`.
 - Không bao giờ để lộ: SQL query, tên bảng/cột, đường dẫn file server, stack trace trong `message`.
 - Message đủ rõ để User hiểu (tiếng Việt), nhưng đủ mơ hồ để không tiết lộ thông tin nhạy cảm (xem quy tắc ẩn danh ở `docs/testing/11_FRS_TC_AUTH.md` mục 1.2, 1.5).
 - Mọi exception mới thêm vào code phải có dòng tương ứng trong file này — coi đây là một phần của Definition of Done (xem `CLAUDE.md`).

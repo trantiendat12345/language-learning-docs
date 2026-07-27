@@ -12,6 +12,8 @@
 | Repository | `<Entity>Repository` | `VocabularyRepository` |
 | Service (interface) | `<Entity>Service` | `VocabularyService` |
 | Service (implementation) | `<Entity>ServiceImpl` | `VocabularyServiceImpl` |
+
+> **Phạm vi áp dụng interface+impl:** chỉ bắt buộc cho service CRUD gắn với 1 entity cụ thể (đọc/ghi trực tiếp qua Repository của entity đó) — khớp `docs/PROJECT_OVERVIEW.md` mục 7.1. Service kiểu orchestration không gắn 1:1 với 1 entity (vd `AuthService` gọi nhiều repository + tạo token + hash password, `JwtService` không chạm DB) được phép là 1 class cụ thể, không bắt buộc tách interface — tách ra chỉ để tách sẽ là abstraction thừa khi chỉ có đúng 1 implementation.
 | Controller | `<Entity>Controller` (thêm `Admin` prefix nếu thuộc `/api/admin/**`) | `VocabularyController`, `AdminVocabularyController` |
 | Request DTO | `<Entity><Action>Request` | `VocabularyCreateRequest`, `VocabularyUpdateRequest` |
 | Response DTO | `<Entity>Response` (đầy đủ) / `<Entity>SummaryResponse` (rút gọn cho danh sách) | `VocabularyResponse`, `VocabularySummaryResponse` |

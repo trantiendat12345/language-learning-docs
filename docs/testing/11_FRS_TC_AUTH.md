@@ -15,7 +15,7 @@
 - **Precondition:** Chưa đăng nhập
 - **Main flow:** Nhập username, email, password, confirm password → submit → hệ thống tạo `User` với `status = PENDING_VERIFICATION` (đã chốt — xem quyết định ở mục 1.2 bên dưới), gửi email xác thực (MVP: log link ra console) → trả về thông báo thành công.
 - **Exception flow:** username/email đã tồn tại → lỗi 409 "đã tồn tại" (`AUTH_USERNAME_TAKEN`/`AUTH_EMAIL_TAKEN`, xem `docs/dev/ERROR_CODE_CATALOG.md`); password không khớp confirm → lỗi 400 (`AUTH_PASSWORD_MISMATCH`); thiếu field bắt buộc → lỗi validate 400.
-- **Postcondition:** Bản ghi `User` mới + `VerificationToken` type `EMAIL_VERIFY` được tạo.
+- **Postcondition:** Bản ghi `User` mới + `VerificationToken` type `EMAIL_VERIFY` được tạo. `timezone` không thu thập ở form đăng ký, được set mặc định `Asia/Ho_Chi_Minh` (xem `docs/testing/07_DATA_DICTIONARY.md`).
 
 **Business Rules riêng module:**
 - Username: 3–50 ký tự, không chứa khoảng trắng, unique không phân biệt hoa/thường.
@@ -92,7 +92,7 @@
 | TC-AUTH-005 | Đăng ký thất bại — password quá ngắn | — | password=`123` | password 3 ký tự | 400 validate error | Medium |
 | TC-AUTH-006 | Đăng ký thất bại — confirm password không khớp | — | password≠confirmPassword | | 400 validate error | Medium |
 | TC-AUTH-007 | Đăng ký thất bại — thiếu field bắt buộc | — | Bỏ trống username | | 400, liệt kê field lỗi trong `errors[]` | Medium |
-| TC-AUTH-008 | Đăng nhập thành công | Tài khoản `user01` ACTIVE | `POST /api/auth/login` đúng username/password | user01 / User@123 | 200, trả `accessToken` + `refreshToken`, không có password trong response | Critical |
+| TC-AUTH-008 | Đăng nhập thành công | Tài khoản `user01` ACTIVE | `POST /api/auth/login` đúng username/password | user01 / User@123 | 200, JSON body chỉ có `accessToken` (không có `refreshToken` trong body — xem TC-AUTH-028), response header có `Set-Cookie: refreshToken=...; HttpOnly; Path=/api/auth`, không có password trong response | Critical |
 | TC-AUTH-009 | Đăng nhập thất bại — sai password | — | Đúng username, sai password | user01 / sai_pass | 401, message chung chung, không tiết lộ username đúng hay sai | Critical |
 | TC-AUTH-010 | Đăng nhập thất bại — username không tồn tại | — | username lạ | `khong_ton_tai` | 401, message giống hệt TC-AUTH-009 (không phân biệt được) | High |
 | TC-AUTH-011 | Đăng nhập thất bại — tài khoản DISABLED | Dùng `user04_disabled` | Login đúng password | user04_disabled | 401, errorCode `AUTH_ACCOUNT_DISABLED`, message rõ "tài khoản bị vô hiệu hoá" | High |
@@ -112,7 +112,7 @@
 | TC-AUTH-025 | Đặt lại mật khẩu — token hết hạn | Token quá thời gian hiệu lực | `POST /api/auth/reset-password` | | 401, errorCode `AUTH_TOKEN_EXPIRED` | High |
 | TC-AUTH-026 | Xác thực email thành công | User PENDING_VERIFICATION có token EMAIL_VERIFY hợp lệ | `GET /api/auth/verify-email?token=...` | | 200, `User.status` chuyển ACTIVE | High |
 | TC-AUTH-027 | Xác thực email — token hết hạn | | `GET /api/auth/verify-email` với token hết hạn | | 400/401, status User không đổi | Medium |
-| TC-AUTH-028 | Kiểm tra response Login không lộ password/hash | Sau TC-AUTH-008 | Xem toàn bộ JSON response | | Không có field `password`/`passwordHash` ở bất kỳ đâu trong response | Critical |
+| TC-AUTH-028 | Kiểm tra response Login không lộ password/hash/refreshToken qua JSON | Sau TC-AUTH-008 | Xem toàn bộ JSON response (Network tab, không phải header) | | Không có field `password`/`passwordHash`/`refreshToken` ở bất kỳ đâu trong JSON body — `refreshToken` chỉ nằm trong header `Set-Cookie` (`httpOnly`), JS phía FE không đọc được | Critical |
 | TC-AUTH-029 | Đăng ký — SQL Injection cơ bản trong field text | — | Nhập username=`' OR '1'='1` | | Không gây lỗi 500, không đăng nhập được bằng chuỗi đó, dữ liệu được xử lý như chuỗi thường (ORM tham số hoá) | Critical |
 | TC-AUTH-030 | Gọi API protected không có token | Chưa login | Gọi bất kỳ API protected nào không kèm Authorization header | | 401 Unauthorized | Critical |
 
