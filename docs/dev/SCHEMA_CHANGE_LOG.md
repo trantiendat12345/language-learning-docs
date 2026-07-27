@@ -8,7 +8,11 @@ Mỗi khi thêm/sửa/xoá entity (thêm bảng, thêm/xoá/đổi kiểu cột,
 
 | Ngày | Entity/Bảng | Thay đổi | Lý do | Giai đoạn |
 |---|---|---|---|---|
-| *(chưa có thay đổi nào — bắt đầu ghi từ khi Giai đoạn 1 tạo entity đầu tiên)* | | | | |
+| 2026-07-27 | `users` | Tạo bảng mới (không có `native_language_id`/`learning_language_id` — cố tình hoãn tới Giai đoạn 3 vì `Language` chưa tồn tại, xem comment trong `User.java`) | Entity tài khoản người dùng | Giai đoạn 2 |
+| 2026-07-27 | `role`, `permission`, `role_permission` | Tạo bảng mới, quan hệ many-to-many | Schema RBAC đầy đủ theo D7, MVP chỉ dùng Role | Giai đoạn 2 |
+| 2026-07-27 | `user_role` | Tạo bảng join mới | Quan hệ many-to-many User–Role | Giai đoạn 2 |
+| 2026-07-27 | `refresh_token` | Tạo bảng mới (kế thừa BaseEntity, không audit fields — D9) | Cấp lại Access Token không cần đăng nhập lại | Giai đoạn 2 |
+| 2026-07-27 | `verification_token` | Tạo bảng mới (kế thừa BaseEntity, không audit fields — D9) | Token xác thực email + đặt lại mật khẩu | Giai đoạn 2 |
 
 ## Mẫu dòng ghi
 
