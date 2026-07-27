@@ -643,7 +643,7 @@ Access token lưu in-memory (Context), **không** localStorage. Refresh token n�
 | Giai đoạn | Nội dung | Trạng thái |
 |---|---|---|
 | 1. Setup | BaseEntity/AuditableEntity, ApiResponse, GlobalExceptionHandler, env vars, cấu trúc thư mục FE/BE, Swagger, MapStruct, SecurityConfig tối thiểu[^1] | ✅ Hoàn thành |
-| 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE | ⏳ Chưa bắt đầu |
+| 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE | 🔄 Đang thực hiện — schema + Register/Login xong |
 | 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning | ⏳ Chưa bắt đầu |
 | 4. Quiz | Question, QuestionOption, generate động theo `sourceType`, QuizAttempt, chấm điểm, lịch sử | ⏳ Chưa bắt đầu |
 | 5. Deck | Deck, DeckCard, Public/Private, Clone, Flashcard learning modes | ⏳ Chưa bắt đầu |
@@ -663,4 +663,8 @@ Mỗi module triển khai theo quy trình 11 bước: phân tích → entity →
 
 **Giai đoạn 1 — Project Setup: ✅ Hoàn thành.** Đã có: biến môi trường + JWT secret xoay vòng, `BaseEntity`/`AuditableEntity` + JPA Auditing, `common/constant` (ErrorCode/ErrorMessage/CommonMessage), bộ Exception nghiệp vụ + `GlobalExceptionHandler`, `ApiResponse`/`PageResponse`/`ApiErrorResponse`, Swagger/OpenAPI + MapStruct trong `pom.xml`, `SecurityConfig` tối thiểu, cấu trúc thư mục frontend + axios client + routing skeleton. Toàn bộ đã build/chạy/test thật, đã commit và push lên GitHub (xem lịch sử commit từng repo).
 
-Bước tiếp theo: **Giai đoạn 2 — Authentication** (mục 12) — User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE. Triển khai theo đúng quy trình 11 bước ở mục 12.
+**Giai đoạn 2 — Authentication: 🔄 Đang thực hiện.** Đã xong: entity `User`/`Role`/`Permission`/`RefreshToken`/`VerificationToken` + repository, `RoleSeeder`, `SecurityConfig` full JWT filter chain (`JwtService`, `JwtAuthenticationFilter`, `JwtAuthenticationEntryPoint`, `JwtAccessDeniedHandler`, `CustomUserDetails`), Auth error code/message riêng (`common/constant` + `auth/exception`), `POST /api/auth/register` + `POST /api/auth/login` (Service + Controller) — đã test thật qua curl toàn bộ case (thành công, trùng username/email, sai mật khẩu, từng trạng thái tài khoản DISABLED/LOCKED/PENDING_VERIFICATION, token hợp lệ gọi được route bảo vệ), có Unit Test cho `AuthService` (10 case). Phát hiện và sửa 1 bug thật khi test: `UserRepository.findByUsernameOrEmail` thiếu `JOIN FETCH roles` gây `LazyInitializationException` trong `JwtAuthenticationFilter` (chạy ngoài transaction) — đã fix.
+
+Còn lại của Giai đoạn 2: Refresh Token (`POST /api/auth/refresh-token`), Logout (`POST /api/auth/logout`), Forgot/Reset Password, Verify Email (`GET /api/auth/verify-email`), `GET/PUT /api/users/me` + đổi mật khẩu, và toàn bộ Frontend (AuthContext, Login/Register page, ProtectedRoute, axios interceptor refresh token).
+
+Bước tiếp theo: tiếp tục Giai đoạn 2 — Refresh Token + Logout trước, sau đó Forgot/Reset Password + Verify Email, cuối cùng Frontend.

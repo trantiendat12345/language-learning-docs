@@ -14,7 +14,7 @@
 - **Actor:** Guest
 - **Precondition:** Chưa đăng nhập
 - **Main flow:** Nhập username, email, password, confirm password → submit → hệ thống tạo `User` với `status = PENDING_VERIFICATION` (đã chốt — xem quyết định ở mục 1.2 bên dưới), gửi email xác thực (MVP: log link ra console) → trả về thông báo thành công.
-- **Exception flow:** username/email đã tồn tại → lỗi 400 "đã tồn tại"; password không khớp confirm → lỗi validate; thiếu field bắt buộc → lỗi validate.
+- **Exception flow:** username/email đã tồn tại → lỗi 409 "đã tồn tại" (`AUTH_USERNAME_TAKEN`/`AUTH_EMAIL_TAKEN`, xem `docs/dev/ERROR_CODE_CATALOG.md`); password không khớp confirm → lỗi 400 (`AUTH_PASSWORD_MISMATCH`); thiếu field bắt buộc → lỗi validate 400.
 - **Postcondition:** Bản ghi `User` mới + `VerificationToken` type `EMAIL_VERIFY` được tạo.
 
 **Business Rules riêng module:**
@@ -33,7 +33,7 @@
   - Sai username/password → 401, thông báo chung chung "Sai thông tin đăng nhập" (không tiết lộ username tồn tại hay không, tránh dò tài khoản).
   - `status = DISABLED` → lỗi rõ ràng "Tài khoản đã bị vô hiệu hoá".
   - `status = LOCKED` → lỗi rõ ràng "Tài khoản đang bị khoá".
-  - `status = PENDING_VERIFICATION` → **đã chốt: chặn đăng nhập hoàn toàn**, trả 401 giống hệt case sai mật khẩu (không có tính năng giới hạn). Triển khai qua `CustomUserDetails.isEnabled()` chỉ trả `true` khi `status = ACTIVE` — xem `language-learning-backend/.../security/CustomUserDetails.java`. Phải xác thực email trước mới đăng nhập được.
+  - `status = PENDING_VERIFICATION` → **đã chốt: chặn đăng nhập hoàn toàn**, trả 401 kèm errorCode `AUTH_EMAIL_NOT_VERIFIED` và message riêng "Vui lòng xác thực email trước khi đăng nhập" — nhất quán với cách xử lý DISABLED/LOCKED (message rõ ràng, không gộp chung với case sai mật khẩu), vì user vừa đăng ký tài khoản này nên biết rõ trạng thái, không phát sinh rủi ro dò username như case sai mật khẩu/username lạ. `AuthService.login()` kiểm tra `status` thủ công trước khi xác thực JWT (không dùng `AuthenticationManager`/`isEnabled()`). Phải xác thực email trước mới đăng nhập được.
 
 ### 1.3 Đăng xuất (Logout)
 
@@ -86,8 +86,8 @@
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-AUTH-001 | Đăng ký thành công | Chưa có tài khoản trùng | 1. Gọi `POST /api/auth/register` với dữ liệu hợp lệ | username=`newuser01`, email hợp lệ chưa tồn tại, password=`Passw0rd1`, confirm khớp | 200, `code=200`, User được tạo với status PENDING_VERIFICATION (đã chốt), không có password trong response | Critical |
-| TC-AUTH-002 | Đăng ký thất bại — username đã tồn tại | Đã có `user01` (xem `09_TEST_DATA.md`) | Đăng ký với username=`user01` | username=`user01` | 400, message rõ ràng "username đã tồn tại", không tạo user mới | High |
-| TC-AUTH-003 | Đăng ký thất bại — email đã tồn tại | user01@test.com đã tồn tại | Đăng ký với email=`user01@test.com` | email trùng | 400 | High |
+| TC-AUTH-002 | Đăng ký thất bại — username đã tồn tại | Đã có `user01` (xem `09_TEST_DATA.md`) | Đăng ký với username=`user01` | username=`user01` | 409, errorCode `AUTH_USERNAME_TAKEN`, message rõ ràng "username đã tồn tại", không tạo user mới | High |
+| TC-AUTH-003 | Đăng ký thất bại — email đã tồn tại | user01@test.com đã tồn tại | Đăng ký với email=`user01@test.com` | email trùng | 409, errorCode `AUTH_EMAIL_TAKEN` | High |
 | TC-AUTH-004 | Đăng ký thất bại — email sai định dạng | — | Nhập email=`abc123` | email không hợp lệ | 400 validate error, field `email` | Medium |
 | TC-AUTH-005 | Đăng ký thất bại — password quá ngắn | — | password=`123` | password 3 ký tự | 400 validate error | Medium |
 | TC-AUTH-006 | Đăng ký thất bại — confirm password không khớp | — | password≠confirmPassword | | 400 validate error | Medium |
@@ -95,9 +95,9 @@
 | TC-AUTH-008 | Đăng nhập thành công | Tài khoản `user01` ACTIVE | `POST /api/auth/login` đúng username/password | user01 / User@123 | 200, trả `accessToken` + `refreshToken`, không có password trong response | Critical |
 | TC-AUTH-009 | Đăng nhập thất bại — sai password | — | Đúng username, sai password | user01 / sai_pass | 401, message chung chung, không tiết lộ username đúng hay sai | Critical |
 | TC-AUTH-010 | Đăng nhập thất bại — username không tồn tại | — | username lạ | `khong_ton_tai` | 401, message giống hệt TC-AUTH-009 (không phân biệt được) | High |
-| TC-AUTH-011 | Đăng nhập thất bại — tài khoản DISABLED | Dùng `user04_disabled` | Login đúng password | user04_disabled | 401/403, message rõ "tài khoản bị vô hiệu hoá" | High |
-| TC-AUTH-012 | Đăng nhập thất bại — tài khoản LOCKED | Dùng `user05_locked` | Login đúng password | user05_locked | 401/403, message rõ "tài khoản bị khoá" | High |
-| TC-AUTH-013 | Đăng nhập — tài khoản PENDING_VERIFICATION | Dùng `user03_pending` | Login | user03_pending | Bị chặn đăng nhập hoàn toàn (đã chốt, xem mục 1.2) — mã HTTP/message cụ thể verify khi `AuthController` hoàn thành (Giai đoạn 2 phần Service/Controller) | Medium |
+| TC-AUTH-011 | Đăng nhập thất bại — tài khoản DISABLED | Dùng `user04_disabled` | Login đúng password | user04_disabled | 401, errorCode `AUTH_ACCOUNT_DISABLED`, message rõ "tài khoản bị vô hiệu hoá" | High |
+| TC-AUTH-012 | Đăng nhập thất bại — tài khoản LOCKED | Dùng `user05_locked` | Login đúng password | user05_locked | 401, errorCode `AUTH_ACCOUNT_LOCKED`, message rõ "tài khoản bị khoá" | High |
+| TC-AUTH-013 | Đăng nhập — tài khoản PENDING_VERIFICATION | Dùng `user03_pending` | Login | user03_pending | Bị chặn đăng nhập hoàn toàn (đã chốt, xem mục 1.2) — 401, errorCode `AUTH_EMAIL_NOT_VERIFIED` | Medium |
 | TC-AUTH-014 | Đăng xuất thành công | Đã login, có accessToken/refreshToken | `POST /api/auth/logout` | | 200, refreshToken bị revoke | High |
 | TC-AUTH-015 | Dùng lại Refresh Token đã logout | Sau TC-AUTH-014 | `POST /api/auth/refresh-token` với token cũ | | 401 | Critical |
 | TC-AUTH-016 | Refresh Token thành công | AccessToken hết hạn, RefreshToken còn hạn | `POST /api/auth/refresh-token` | | 200, trả accessToken mới | Critical |
@@ -108,8 +108,8 @@
 | TC-AUTH-021 | Đặt lại mật khẩu thành công | Có token PASSWORD_RESET hợp lệ | `POST /api/auth/reset-password` | token hợp lệ, password mới | 200, password đổi thành công, token `usedAt` được set | Critical |
 | TC-AUTH-022 | Đăng nhập bằng mật khẩu cũ sau khi reset | Sau TC-AUTH-021 | Login bằng password cũ | | 401 | Critical |
 | TC-AUTH-023 | Đăng nhập bằng mật khẩu mới sau khi reset | Sau TC-AUTH-021 | Login bằng password mới | | 200 | Critical |
-| TC-AUTH-024 | Dùng lại token reset đã dùng | Sau TC-AUTH-021, dùng lại cùng token | `POST /api/auth/reset-password` lần 2 | token đã used | 400/401, "token đã được sử dụng hoặc hết hạn" | Critical |
-| TC-AUTH-025 | Đặt lại mật khẩu — token hết hạn | Token quá thời gian hiệu lực | `POST /api/auth/reset-password` | | 400/401 | High |
+| TC-AUTH-024 | Dùng lại token reset đã dùng | Sau TC-AUTH-021, dùng lại cùng token | `POST /api/auth/reset-password` lần 2 | token đã used | 400, errorCode `AUTH_TOKEN_ALREADY_USED`, "token đã được sử dụng hoặc hết hạn" | Critical |
+| TC-AUTH-025 | Đặt lại mật khẩu — token hết hạn | Token quá thời gian hiệu lực | `POST /api/auth/reset-password` | | 401, errorCode `AUTH_TOKEN_EXPIRED` | High |
 | TC-AUTH-026 | Xác thực email thành công | User PENDING_VERIFICATION có token EMAIL_VERIFY hợp lệ | `GET /api/auth/verify-email?token=...` | | 200, `User.status` chuyển ACTIVE | High |
 | TC-AUTH-027 | Xác thực email — token hết hạn | | `GET /api/auth/verify-email` với token hết hạn | | 400/401, status User không đổi | Medium |
 | TC-AUTH-028 | Kiểm tra response Login không lộ password/hash | Sau TC-AUTH-008 | Xem toàn bộ JSON response | | Không có field `password`/`passwordHash` ở bất kỳ đâu trong response | Critical |
