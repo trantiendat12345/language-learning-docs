@@ -38,6 +38,14 @@
 - Comment viết tiếng Việt có dấu đầy đủ (pom.xml đã cấu hình `UTF-8`, không còn rủi ro lỗi encoding).
 - Không bắt buộc comment cho method `private` đơn giản, hiển nhiên qua tên hàm.
 
+### 1.5 Unit Test (UT)
+
+- **Ngay sau khi code xong 1 chức năng có logic thật** (Service, mapping logic, factory method, exception handler...) — viết Unit Test cho chức năng đó luôn, không dồn lại cuối giai đoạn.
+- Naming: `<ClassName>Test.java`, đặt ở `src/test/java` theo đúng package tương ứng với `src/main/java` (chuẩn Maven).
+- Dùng JUnit 5 + Mockito (đã có sẵn qua `spring-boot-starter-test`, không cần thêm dependency). Mock dependency cho Service bằng Mockito — chỉ dùng `@SpringBootTest` (load context đầy đủ) khi thật sự cần test tích hợp, còn lại ưu tiên unit test thuần (nhanh hơn nhiều).
+- **Không bắt buộc** UT cho: DTO thuần field không có logic (`ApiResponse`, `ApiErrorResponse` nếu chỉ có getter/setter/builder), Entity/`@MappedSuperclass` thuần field, Config class chỉ khai báo Bean đơn giản không có nhánh điều kiện.
+- Chạy `./mvnw test` phải pass trước khi báo chức năng đó đã hoàn thành với người dùng.
+
 ## 2. Frontend (React / TypeScript)
 
 ### 2.1 Naming
@@ -96,6 +104,7 @@ Trước khi coi 1 module đã hoàn thành (theo đúng tinh thần "mỗi giai
 - [ ] Entity mới/đổi field đã được ghi vào `docs/dev/SCHEMA_CHANGE_LOG.md` và đối chiếu lại `docs/testing/07_DATA_DICTIONARY.md`.
 - [ ] API mới đã kiểm tra thủ công qua Swagger/Postman ít nhất 1 lần (happy path + 1 case lỗi).
 - [ ] Test Case liên quan ở `docs/testing/FRS_TC_*.md` đã chạy qua ở mức tối thiểu Critical/High (không cần chờ tester riêng nếu code 1 mình, nhưng phải tự chạy).
+- [ ] Đã viết Unit Test cho logic chính vừa hoàn thành (xem mục 1.5) và `./mvnw test` chạy pass.
 - [ ] `npm run lint` (frontend) không có lỗi mới phát sinh.
 - [ ] Nếu trong lúc làm có việc phát sinh ngoài kế hoạch ban đầu và đã được đồng ý áp dụng (vd thêm 1 config/dependency chưa có trong roadmap) — tài liệu `.md` liên quan đã được cập nhật để khớp đúng với code thực tế.
 - [ ] `docs/PROJECT_OVERVIEW.md` mục 12 (roadmap) đã đổi trạng thái Giai đoạn vừa xong thành ✅, mục 13 (Bước tiếp theo) đã trỏ sang bước kế tiếp — xem `CLAUDE.md` mục "Cập nhật tài liệu song song với code".

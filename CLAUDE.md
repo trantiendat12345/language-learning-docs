@@ -85,6 +85,8 @@ npm run build                   # kiểm tra build production không lỗi type
 
 Chạy qua checklist Definition of Done ở `docs/dev/CODING_CONVENTIONS.md` mục 5. Không tự ý bỏ qua bước nào trong đó khi báo cáo hoàn thành với người dùng.
 
+**Ngay sau khi code xong 1 chức năng có logic thật, viết Unit Test cho chức năng đó luôn** (không dồn lại cuối giai đoạn) — chi tiết quy ước ở `docs/dev/CODING_CONVENTIONS.md` mục 1.5. `./mvnw test` phải pass trước khi báo hoàn thành.
+
 ## Không tự ý thay đổi
 
 Không đổi kiến trúc/kiến quyết đã chốt (package structure, entity design, D1–D12) mà không giải thích lý do và được xác nhận — kể cả khi cách khác "gọn hơn". Nếu phát hiện vấn đề với thiết kế hiện tại, nêu ra và đề xuất, không tự ý sửa `docs/PROJECT_OVERVIEW.md` rồi code theo hướng mới trong cùng 1 lượt.
