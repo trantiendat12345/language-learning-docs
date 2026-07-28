@@ -46,12 +46,12 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 | `AUTH_ACCOUNT_DISABLED` | 401 | TC-AUTH-011 |
 | `AUTH_ACCOUNT_LOCKED` | 401 | TC-AUTH-012 |
 | `AUTH_EMAIL_NOT_VERIFIED` | 401 | TC-AUTH-013 (status PENDING_VERIFICATION — chặn đăng nhập hoàn toàn, xem `docs/testing/11_FRS_TC_AUTH.md` mục 1.2) |
-| `AUTH_TOKEN_EXPIRED` | 401 | TC-AUTH-017 |
-| `AUTH_TOKEN_INVALID` | 401 | TC-AUTH-018 |
-| `AUTH_TOKEN_ALREADY_USED` | 400 | TC-AUTH-024 (reset password token dùng lại) |
+| `AUTH_TOKEN_EXPIRED` | 401 | TC-AUTH-017 (refresh-token), TC-AUTH-025 (reset-password), TC-AUTH-027 (verify-email) — dùng chung `TokenExpiredException` |
+| `AUTH_TOKEN_INVALID` | 401 | TC-AUTH-018, 031 (refresh-token, kể cả thiếu cookie), TC-AUTH-033 (reset-password) — dùng chung `TokenInvalidException` |
+| `AUTH_TOKEN_ALREADY_USED` | 400 | TC-AUTH-024 (reset-password token dùng lại), TC-AUTH-034 (verify-email token dùng lại) — dùng chung `TokenAlreadyUsedException` |
 | `AUTH_USERNAME_TAKEN` | 409 | TC-AUTH-002 |
 | `AUTH_EMAIL_TAKEN` | 409 | TC-AUTH-003 |
-| `AUTH_PASSWORD_MISMATCH` | 400 | TC-AUTH-006 (confirmPassword không khớp password) |
+| `AUTH_PASSWORD_MISMATCH` | 400 | TC-AUTH-006 (register), TC-AUTH-032 (reset-password) |
 
 > **Đã chốt (Giai đoạn 2):** Mọi lỗi liên quan tới trạng thái tài khoản khi đăng nhập (sai mật khẩu, DISABLED, LOCKED, PENDING_VERIFICATION) đều trả **401** thay vì phân biệt 401/403 — vì đây là lỗi "không xác thực được", không phải lỗi "đã xác thực nhưng không đủ quyền". `AuthService.login()` kiểm tra `status` thủ công (không dùng `AuthenticationManager`) để ném đúng exception con tương ứng.
 

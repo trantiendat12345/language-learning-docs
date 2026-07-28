@@ -10,10 +10,10 @@
 |---|---|---|---|
 | 1.1 | Đăng ký | TC-AUTH-001 → 007, 029 | Not Started |
 | 1.2 | Đăng nhập | TC-AUTH-008 → 013 | Not Started |
-| 1.3 | Đăng xuất | TC-AUTH-014, 015 | Not Started |
-| 1.4 | Refresh Token | TC-AUTH-016 → 018 | Not Started |
-| 1.5/1.6 | Quên/Đặt lại mật khẩu | TC-AUTH-019 → 025 | Not Started |
-| 1.7 | Xác thực Email | TC-AUTH-026, 027 | Not Started |
+| 1.3 | Đăng xuất | TC-AUTH-014, 015, 035 | Not Started |
+| 1.4 | Refresh Token | TC-AUTH-016 → 018, 031 | Not Started |
+| 1.5/1.6 | Quên/Đặt lại mật khẩu | TC-AUTH-019 → 025, 032, 033 | Not Started |
+| 1.7 | Xác thực Email | TC-AUTH-026, 027, 034 | Not Started |
 | — | Không lộ dữ liệu nhạy cảm | TC-AUTH-028 | Not Started |
 | — | Chặn truy cập không token | TC-AUTH-030 | Not Started |
 

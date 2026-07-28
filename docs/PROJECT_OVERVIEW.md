@@ -583,11 +583,11 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 |---|---|---|
 | POST | `/api/auth/register` | public — ✅ đã implement |
 | POST | `/api/auth/login` | public — ✅ đã implement, trả `accessToken` trong JSON body + set `refreshToken` qua cookie httpOnly (`Set-Cookie`, path `/api/auth`) |
-| POST | `/api/auth/refresh-token` | public, đọc refresh token từ cookie — ⏳ chưa implement |
-| POST | `/api/auth/logout` | protected, revoke refresh token — ⏳ chưa implement |
-| POST | `/api/auth/forgot-password` | public — ⏳ chưa implement |
-| POST | `/api/auth/reset-password` | public — ⏳ chưa implement |
-| GET | `/api/auth/verify-email` | public — ⏳ chưa implement |
+| POST | `/api/auth/refresh-token` | public, đọc refresh token từ cookie — ✅ đã implement, không rotate refreshToken |
+| POST | `/api/auth/logout` | **protected** (khác các endpoint `/api/auth/**` còn lại), revoke refresh token theo ownership check — ✅ đã implement |
+| POST | `/api/auth/forgot-password` | public — ✅ đã implement, message chung chung dù email tồn tại hay không |
+| POST | `/api/auth/reset-password` | public — ✅ đã implement, revoke toàn bộ RefreshToken cũ của user sau khi đổi thành công |
+| GET | `/api/auth/verify-email` | public — ✅ đã implement |
 | GET/PUT | `/api/users/me` | protected — ⏳ chưa implement |
 | PUT | `/api/users/me/password` | protected — ⏳ chưa implement |
 | GET | `/api/languages` | public |
@@ -647,7 +647,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | Giai đoạn | Nội dung | Trạng thái |
 |---|---|---|
 | 1. Setup | BaseEntity/AuditableEntity, ApiResponse, GlobalExceptionHandler, env vars, cấu trúc thư mục FE/BE, Swagger, MapStruct, SecurityConfig tối thiểu[^1] | ✅ Hoàn thành |
-| 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE | 🔄 Đang thực hiện — schema + Register/Login xong |
+| 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE | 🔄 Đang thực hiện — toàn bộ Backend Auth xong, còn `/api/users/me` + Frontend |
 | 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning | ⏳ Chưa bắt đầu |
 | 4. Quiz | Question, QuestionOption, generate động theo `sourceType`, QuizAttempt, chấm điểm, lịch sử | ⏳ Chưa bắt đầu |
 | 5. Deck | Deck, DeckCard, Public/Private, Clone, Flashcard learning modes | ⏳ Chưa bắt đầu |
@@ -667,8 +667,16 @@ Mỗi module triển khai theo quy trình 11 bước: phân tích → entity →
 
 **Giai đoạn 1 — Project Setup: ✅ Hoàn thành.** Đã có: biến môi trường + JWT secret xoay vòng, `BaseEntity`/`AuditableEntity` + JPA Auditing, `common/constant` (ErrorCode/ErrorMessage/CommonMessage), bộ Exception nghiệp vụ + `GlobalExceptionHandler`, `ApiResponse`/`PageResponse`/`ApiErrorResponse`, Swagger/OpenAPI + MapStruct trong `pom.xml`, `SecurityConfig` tối thiểu, cấu trúc thư mục frontend + axios client + routing skeleton. Toàn bộ đã build/chạy/test thật, đã commit và push lên GitHub (xem lịch sử commit từng repo).
 
-**Giai đoạn 2 — Authentication: 🔄 Đang thực hiện.** Đã xong: entity `User`/`Role`/`Permission`/`RefreshToken`/`VerificationToken` + repository, `RoleSeeder`, `SecurityConfig` full JWT filter chain (`JwtService`, `JwtAuthenticationFilter`, `JwtAuthenticationEntryPoint`, `JwtAccessDeniedHandler`, `CustomUserDetails`), Auth error code/message riêng (`common/constant` + `auth/exception`), `POST /api/auth/register` + `POST /api/auth/login` (Service + Controller) — đã test thật qua curl toàn bộ case (thành công, trùng username/email, sai mật khẩu, từng trạng thái tài khoản DISABLED/LOCKED/PENDING_VERIFICATION, token hợp lệ gọi được route bảo vệ), có Unit Test cho `AuthService` (10 case). Phát hiện và sửa 1 bug thật khi test: `UserRepository.findByUsernameOrEmail` thiếu `JOIN FETCH roles` gây `LazyInitializationException` trong `JwtAuthenticationFilter` (chạy ngoài transaction) — đã fix.
+**Giai đoạn 2 — Authentication: 🔄 Đang thực hiện.** Đã xong toàn bộ Backend Auth:
 
-Còn lại của Giai đoạn 2: Refresh Token (`POST /api/auth/refresh-token`), Logout (`POST /api/auth/logout`), Forgot/Reset Password, Verify Email (`GET /api/auth/verify-email`), `GET/PUT /api/users/me` + đổi mật khẩu, và toàn bộ Frontend (AuthContext, Login/Register page, ProtectedRoute, axios interceptor refresh token).
+- Entity `User`/`Role`/`Permission`/`RefreshToken`/`VerificationToken` + repository, `RoleSeeder`.
+- `SecurityConfig` full JWT filter chain (`JwtService`, `JwtAuthenticationFilter`, `JwtAuthenticationEntryPoint`, `JwtAccessDeniedHandler`, `CustomUserDetails`) + `CorsConfig` (credentialed origin cho cookie).
+- Auth error code/message riêng (`common/constant` + `auth/exception`, gồm cả 3 exception token dùng chung `TokenInvalidException`/`TokenExpiredException`/`TokenAlreadyUsedException`).
+- 7 endpoint: `POST /api/auth/register`, `POST /api/auth/login` (accessToken JSON + refreshToken httpOnly cookie), `POST /api/auth/refresh-token`, `POST /api/auth/logout` (protected, ownership check), `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` (revoke toàn bộ RefreshToken cũ), `GET /api/auth/verify-email`.
+- Refresh/Verification Token lưu DB dạng SHA-256 hash, không plaintext.
+- Unit Test cho `AuthService`: 31 case (register/login/refresh/logout/forgot/reset/verify — thành công + toàn bộ exception flow).
+- Đã test thật qua curl + kiểm DB trực tiếp cho toàn bộ 7 endpoint, gồm 2 bug thật phát hiện và fix trong quá trình: (1) `UserRepository.findByUsernameOrEmail` thiếu `JOIN FETCH roles` gây `LazyInitializationException` trong `JwtAuthenticationFilter`; (2) `refreshAccessToken`/token validation thiếu check `null` khi cookie vắng mặt gây `NullPointerException` → 500 thay vì 401.
 
-Bước tiếp theo: tiếp tục Giai đoạn 2 — Refresh Token + Logout trước, sau đó Forgot/Reset Password + Verify Email, cuối cùng Frontend.
+Còn lại của Giai đoạn 2: `GET/PUT /api/users/me` + đổi mật khẩu, và toàn bộ Frontend (AuthContext, Login/Register page, ProtectedRoute, axios interceptor refresh token).
+
+Bước tiếp theo: `UserService`/`UserController` (`/api/users/me`) trước, sau đó Frontend Auth (AuthContext, Login/Register/ProtectedRoute, axios interceptor).

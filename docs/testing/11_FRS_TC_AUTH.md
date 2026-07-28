@@ -98,22 +98,27 @@
 | TC-AUTH-011 | Đăng nhập thất bại — tài khoản DISABLED | Dùng `user04_disabled` | Login đúng password | user04_disabled | 401, errorCode `AUTH_ACCOUNT_DISABLED`, message rõ "tài khoản bị vô hiệu hoá" | High |
 | TC-AUTH-012 | Đăng nhập thất bại — tài khoản LOCKED | Dùng `user05_locked` | Login đúng password | user05_locked | 401, errorCode `AUTH_ACCOUNT_LOCKED`, message rõ "tài khoản bị khoá" | High |
 | TC-AUTH-013 | Đăng nhập — tài khoản PENDING_VERIFICATION | Dùng `user03_pending` | Login | user03_pending | Bị chặn đăng nhập hoàn toàn (đã chốt, xem mục 1.2) — 401, errorCode `AUTH_EMAIL_NOT_VERIFIED` | Medium |
-| TC-AUTH-014 | Đăng xuất thành công | Đã login, có accessToken/refreshToken | `POST /api/auth/logout` | | 200, refreshToken bị revoke | High |
-| TC-AUTH-015 | Dùng lại Refresh Token đã logout | Sau TC-AUTH-014 | `POST /api/auth/refresh-token` với token cũ | | 401 | Critical |
-| TC-AUTH-016 | Refresh Token thành công | AccessToken hết hạn, RefreshToken còn hạn | `POST /api/auth/refresh-token` | | 200, trả accessToken mới | Critical |
-| TC-AUTH-017 | Refresh Token thất bại — token hết hạn | RefreshToken quá hạn (chỉnh test data hoặc chờ hết hạn) | `POST /api/auth/refresh-token` | | 401 | High |
-| TC-AUTH-018 | Refresh Token thất bại — token không hợp lệ/giả mạo | — | Gửi chuỗi token ngẫu nhiên | | 401 | High |
-| TC-AUTH-019 | Quên mật khẩu — email tồn tại | user01@test.com tồn tại | `POST /api/auth/forgot-password` | email=user01@test.com | 200, message chung chung, VerificationToken PASSWORD_RESET được tạo | High |
-| TC-AUTH-020 | Quên mật khẩu — email không tồn tại | — | `POST /api/auth/forgot-password` | email lạ | 200 (message giống TC-AUTH-019, không tiết lộ), **không** tạo token | Critical |
-| TC-AUTH-021 | Đặt lại mật khẩu thành công | Có token PASSWORD_RESET hợp lệ | `POST /api/auth/reset-password` | token hợp lệ, password mới | 200, password đổi thành công, token `usedAt` được set | Critical |
-| TC-AUTH-022 | Đăng nhập bằng mật khẩu cũ sau khi reset | Sau TC-AUTH-021 | Login bằng password cũ | | 401 | Critical |
+| TC-AUTH-014 | Đăng xuất thành công | Đã login, có accessToken/refreshToken | `POST /api/auth/logout` kèm `Authorization: Bearer <accessToken>` | | 200, refreshToken (theo cookie) bị revoke trong DB, response `Set-Cookie` xoá cookie (Max-Age=0) | High |
+| TC-AUTH-015 | Dùng lại Refresh Token đã logout | Sau TC-AUTH-014 | `POST /api/auth/refresh-token` với cookie refreshToken cũ | | 401, errorCode `AUTH_TOKEN_INVALID` | Critical |
+| TC-AUTH-016 | Refresh Token thành công | AccessToken hết hạn, RefreshToken còn hạn | `POST /api/auth/refresh-token` (đọc cookie) | | 200, trả `accessToken` mới trong JSON body (không rotate refreshToken) | Critical |
+| TC-AUTH-017 | Refresh Token thất bại — token hết hạn | RefreshToken quá hạn (chỉnh test data hoặc chờ hết hạn) | `POST /api/auth/refresh-token` | | 401, errorCode `AUTH_TOKEN_EXPIRED` | High |
+| TC-AUTH-018 | Refresh Token thất bại — token không hợp lệ/giả mạo | — | Gửi chuỗi token ngẫu nhiên qua cookie | | 401, errorCode `AUTH_TOKEN_INVALID` | High |
+| TC-AUTH-019 | Quên mật khẩu — email tồn tại | user01@test.com tồn tại | `POST /api/auth/forgot-password` | email=user01@test.com | 200, message chung chung, VerificationToken PASSWORD_RESET được tạo (hạn 20 phút) | High |
+| TC-AUTH-020 | Quên mật khẩu — email không tồn tại | — | `POST /api/auth/forgot-password` | email lạ | 200 (message giống hệt TC-AUTH-019 — đã verify cùng 1 constant `AUTH_FORGOT_PASSWORD_SUCCESS`), **không** tạo token | Critical |
+| TC-AUTH-021 | Đặt lại mật khẩu thành công | Có token PASSWORD_RESET hợp lệ | `POST /api/auth/reset-password` | token hợp lệ, newPassword+confirmNewPassword khớp | 200, password đổi thành công, token `usedAt` được set, toàn bộ RefreshToken cũ của user bị revoke (đã verify DB thật) | Critical |
+| TC-AUTH-022 | Đăng nhập bằng mật khẩu cũ sau khi reset | Sau TC-AUTH-021 | Login bằng password cũ | | 401, errorCode `AUTH_INVALID_CREDENTIALS` | Critical |
 | TC-AUTH-023 | Đăng nhập bằng mật khẩu mới sau khi reset | Sau TC-AUTH-021 | Login bằng password mới | | 200 | Critical |
 | TC-AUTH-024 | Dùng lại token reset đã dùng | Sau TC-AUTH-021, dùng lại cùng token | `POST /api/auth/reset-password` lần 2 | token đã used | 400, errorCode `AUTH_TOKEN_ALREADY_USED`, "token đã được sử dụng hoặc hết hạn" | Critical |
 | TC-AUTH-025 | Đặt lại mật khẩu — token hết hạn | Token quá thời gian hiệu lực | `POST /api/auth/reset-password` | | 401, errorCode `AUTH_TOKEN_EXPIRED` | High |
-| TC-AUTH-026 | Xác thực email thành công | User PENDING_VERIFICATION có token EMAIL_VERIFY hợp lệ | `GET /api/auth/verify-email?token=...` | | 200, `User.status` chuyển ACTIVE | High |
-| TC-AUTH-027 | Xác thực email — token hết hạn | | `GET /api/auth/verify-email` với token hết hạn | | 400/401, status User không đổi | Medium |
+| TC-AUTH-026 | Xác thực email thành công | User PENDING_VERIFICATION có token EMAIL_VERIFY hợp lệ | `GET /api/auth/verify-email?token=...` | | 200, `User.status` chuyển ACTIVE, token `usedAt` được set | High |
+| TC-AUTH-027 | Xác thực email — token hết hạn | | `GET /api/auth/verify-email` với token hết hạn | | 401, errorCode `AUTH_TOKEN_EXPIRED`, status User không đổi | Medium |
 | TC-AUTH-028 | Kiểm tra response Login không lộ password/hash/refreshToken qua JSON | Sau TC-AUTH-008 | Xem toàn bộ JSON response (Network tab, không phải header) | | Không có field `password`/`passwordHash`/`refreshToken` ở bất kỳ đâu trong JSON body — `refreshToken` chỉ nằm trong header `Set-Cookie` (`httpOnly`), JS phía FE không đọc được | Critical |
 | TC-AUTH-029 | Đăng ký — SQL Injection cơ bản trong field text | — | Nhập username=`' OR '1'='1` | | Không gây lỗi 500, không đăng nhập được bằng chuỗi đó, dữ liệu được xử lý như chuỗi thường (ORM tham số hoá) | Critical |
 | TC-AUTH-030 | Gọi API protected không có token | Chưa login | Gọi bất kỳ API protected nào không kèm Authorization header | | 401 Unauthorized | Critical |
+| TC-AUTH-031 | Refresh Token — thiếu cookie hoàn toàn | Chưa login, không có cookie | `POST /api/auth/refresh-token` không kèm cookie | | 401, errorCode `AUTH_TOKEN_INVALID` (đã fix bug thật: trước đây ném `NullPointerException` → 500) | Critical |
+| TC-AUTH-032 | Đặt lại mật khẩu — confirmNewPassword không khớp newPassword | Có token PASSWORD_RESET hợp lệ | `POST /api/auth/reset-password` | newPassword≠confirmNewPassword | 400, errorCode `AUTH_PASSWORD_MISMATCH` | Medium |
+| TC-AUTH-033 | Đặt lại mật khẩu — token không tồn tại/sai định dạng | — | `POST /api/auth/reset-password` | token ngẫu nhiên | 401, errorCode `AUTH_TOKEN_INVALID` | Medium |
+| TC-AUTH-034 | Xác thực email — token đã dùng | Sau TC-AUTH-026, dùng lại cùng token | `GET /api/auth/verify-email` lần 2 | | 400, errorCode `AUTH_TOKEN_ALREADY_USED` | Medium |
+| TC-AUTH-035 | Đăng xuất — ownership check khi cookie refreshToken thuộc user khác | Login bằng 2 tài khoản khác nhau trên 2 client | `POST /api/auth/logout` với accessToken của user A nhưng cookie refreshToken của user B | | 200 (không lộ lỗi, không revoke), server tự bỏ qua vì token không thuộc currentUserId — kiểm tra DB: refreshToken của user B vẫn `revoked=false` | High |
 
 **Ghi chú:** Bổ sung Test Case cho rate-limit đăng nhập sai nhiều lần liên tiếp nếu tính năng này được triển khai (hiện `docs/PROJECT_OVERVIEW.md` chỉ liệt kê "Rate Limiting nếu cần" — xác nhận với dev trước khi viết case chi tiết).
