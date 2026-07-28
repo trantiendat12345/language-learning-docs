@@ -22,7 +22,7 @@
 | Feature # | Tính năng | Test Case ID | Trạng thái |
 |---|---|---|---|
 | 2.1/2.2 | Xem/Sửa Profile | TC-PROFILE-001 → 006, 014, 015 | Not Started |
-| 2.3 | Đổi mật khẩu | TC-PROFILE-007 → 011 | Not Started |
+| 2.3 | Đổi mật khẩu | TC-PROFILE-007 → 011, 017 | Not Started |
 | 2.4 | Daily Goal | TC-PROFILE-012, 013 | Not Started |
 | 2.5 | Theme | TC-PROFILE-016 | Not Started |
 
