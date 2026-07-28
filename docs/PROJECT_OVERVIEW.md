@@ -590,8 +590,8 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | GET | `/api/auth/verify-email` | public — ✅ đã implement |
 | GET/PUT | `/api/users/me` | protected — ✅ đã implement, PUT chỉ sửa `displayName/avatarUrl/birthday/gender/country/currentLevel` (chưa có `nativeLanguageId`/`learningLanguageId` — Giai đoạn 3) |
 | PUT | `/api/users/me/password` | protected — ✅ đã implement, revoke toàn bộ RefreshToken cũ sau khi đổi thành công, từ chối nếu newPassword trùng currentPassword |
-| GET | `/api/languages` | public |
-| GET/POST/PUT/DELETE | `/api/admin/languages/**` | admin |
+| GET | `/api/languages` | public — ✅ đã implement, chỉ trả status=ACTIVE |
+| GET/POST/PUT/DELETE | `/api/admin/languages/**` | admin — ✅ đã implement (list không phân trang — số lượng Language nhỏ), thấy cả INACTIVE |
 | GET | `/api/courses?languageId=&level=&keyword=&page=` | public, pagination |
 | GET | `/api/courses/{id}` | public |
 | POST | `/api/courses/{id}/enroll` | protected |
@@ -648,7 +648,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 |---|---|---|
 | 1. Setup | BaseEntity/AuditableEntity, ApiResponse, GlobalExceptionHandler, env vars, cấu trúc thư mục FE/BE, Swagger, MapStruct, SecurityConfig tối thiểu[^1] | ✅ Hoàn thành |
 | 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE | ✅ Hoàn thành — Backend + Frontend đầy đủ kể cả Forgot/Reset Password, Verify Email, Profile (mở rộng hơn mô tả gốc theo yêu cầu người dùng)[^2], người dùng đã tự test UI thật trên browser và xác nhận chạy đúng |
-| 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning | ⏳ Chưa bắt đầu |
+| 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning | 🔄 Đang thực hiện — Language xong, còn Course/Lesson/Vocabulary/Grammar + luồng Enroll/Complete Lesson |
 | 4. Quiz | Question, QuestionOption, generate động theo `sourceType`, QuizAttempt, chấm điểm, lịch sử | ⏳ Chưa bắt đầu |
 | 5. Deck | Deck, DeckCard, Public/Private, Clone, Flashcard learning modes | ⏳ Chưa bắt đầu |
 | 6. Spaced Repetition | UserVocabularyProgress, ReviewLog, SM-2, Review Today | ⏳ Chưa bắt đầu |
@@ -694,4 +694,15 @@ Frontend (Auth) — người dùng xác nhận làm nốt toàn bộ (không ch�
 - `npm run lint` sạch (đã sửa 1 lỗi thật: `react-hooks/set-state-in-effect` ở `VerifyEmailPage` — gọi `setState` đồng bộ ngay trong effect cho case thiếu token, sửa bằng cách xử lý case đó ở render-time thay vì trong effect), `npm run build` (tsc) pass. Verify contract qua curl cho toàn bộ 7 API Auth + 3 API Profile: field JSON khớp chính xác `types/api.ts`/`auth.ts`/`user.ts`, xác nhận `AccessTokenResponse` không có `refreshToken` (đúng `@JsonIgnore` Backend).
 - Đã test tương tác thật trên browser (`http://localhost:5173`) — người dùng tự bấm thử, xác nhận UI chạy đúng.
 
-Bước tiếp theo: **Giai đoạn 3 — Course System** (mục 12) — `Language`, `Course`, `Lesson`, `Vocabulary`, `Grammar`, Admin CRUD + User view + Lesson learning. Triển khai theo đúng quy trình 11 bước ở mục 12.
+**Giai đoạn 3 — Course System: 🔄 Đang thực hiện.** Chia nhiều chunk giống Giai đoạn 2 — bắt đầu từ `Language` (nền tảng, Course/Vocabulary đều tham chiếu tới):
+
+- Entity `Language` (kế thừa `AuditableEntity`) + `LanguageRepository`, `LanguageMapper` (MapStruct), `LanguageService`/`LanguageServiceImpl` (tách interface+impl đúng convention CRUD 1 entity).
+- `GET /api/languages` (public, chỉ trả `ACTIVE`) + `GET/POST/PUT/DELETE /api/admin/languages/**` (yêu cầu role ADMIN).
+- `SecurityConfig` thêm rule mới: `/api/languages` permitAll, `/api/admin/**` bắt buộc `hasRole("ADMIN")` (D7 — MVP chỉ check Role, chưa check permission chi tiết).
+- 10 Unit Test cho `LanguageServiceImpl` (81 test toàn backend).
+- Đã test thật qua curl + kiểm DB: public list chỉ thấy `ACTIVE`, Admin thấy cả `INACTIVE`, USER thường bị chặn 403 ở `/api/admin/**`, duplicate code bị từ chối 409, soft-delete hoạt động đúng (`@SQLRestriction` ẩn khỏi mọi query kể cả của Admin).
+- **Phát hiện và fix 1 bug thật ảnh hưởng toàn hệ thống:** `JpaAuditingConfig.auditorProvider()` từ Giai đoạn 1 luôn trả `Optional.empty()` (code cũ ghi rõ TODO "sau khi có SecurityContext thật thì sửa" nhưng chưa từng được hoàn thiện) — nghĩa là `createdBy`/`updatedBy` **chưa từng hoạt động đúng cho bất kỳ entity nào** kể từ khi có Auth (Giai đoạn 2). Đã sửa để đọc `userId` từ `CustomUserDetails` trong `SecurityContext`, verify lại bằng curl thật: tạo mới → `createdBy` đúng id admin, sửa → `updatedBy` đúng id admin, request ẩn danh (vd tự đăng ký) → cả 2 đều `null` như kỳ vọng. `docs/testing/07_DATA_DICTIONARY.md`/`21_FRS_TC_ADMIN.md` đã mô tả đúng hành vi này từ trước — chỉ code sai, tài liệu không cần sửa.
+
+Còn lại của Giai đoạn 3: `Course` + `Lesson` (phụ thuộc `Language`), `Vocabulary` + `Grammar` + `Tag`/`VocabularyRelation`, và luồng `Enroll`/`Complete Lesson` (`CourseEnrollment`, `LessonProgress` — theo FRS `13_FRS_TC_COURSE_LESSON.md` các entity này gắn liền với "Lesson learning" ở Giai đoạn 3, dù bảng roadmap liệt kê `CourseEnrollment`/`LessonProgress` ở Giai đoạn 7; XP awarding khi hoàn thành Lesson (`XpLog`) vẫn hoãn đúng lịch Giai đoạn 7 vì cần hạ tầng D8 chưa xây).
+
+Bước tiếp theo: `Course` + `Lesson` (Admin CRUD + User view, phụ thuộc `Language` vừa xong).

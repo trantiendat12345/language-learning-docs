@@ -13,6 +13,7 @@ Mỗi khi thêm/sửa/xoá entity (thêm bảng, thêm/xoá/đổi kiểu cột,
 | 2026-07-27 | `user_role` | Tạo bảng join mới | Quan hệ many-to-many User–Role | Giai đoạn 2 |
 | 2026-07-27 | `refresh_token` | Tạo bảng mới (kế thừa BaseEntity, không audit fields — D9) | Cấp lại Access Token không cần đăng nhập lại | Giai đoạn 2 |
 | 2026-07-27 | `verification_token` | Tạo bảng mới (kế thừa BaseEntity, không audit fields — D9) | Token xác thực email + đặt lại mật khẩu | Giai đoạn 2 |
+| 2026-07-28 | `language` | Tạo bảng mới (kế thừa AuditableEntity — D9), cột `code` (UK), `name`, `flag_icon_url` (nullable), `status` (enum ACTIVE/INACTIVE) | Ngôn ngữ hệ thống hỗ trợ, nền tảng cho Course/Vocabulary tham chiếu | Giai đoạn 3 |
 
 ## Mẫu dòng ghi
 
