@@ -557,21 +557,21 @@ Message/errorCode không hardcode trực tiếp trong các class trên — lấy
 
 ```
 src/
-├── api/            (axiosClient.ts, interceptors)
+├── api/            (axiosClient.ts, tokenStore.ts, apiError.ts)
 ├── assets/
-├── components/     (components/vocabulary, components/deck, components/common...)
-├── contexts/        (AuthContext, ThemeContext)
-├── hooks/           (useAuth, useDebounce, usePagination)
-├── layouts/         (PublicLayout, UserLayout, AdminLayout)
-├── pages/           (pages/auth, pages/dashboard, pages/deck, pages/admin...)
-├── routes/           (AppRoutes.tsx, PublicRoute, ProtectedRoute, AdminRoute)
-├── services/         (authService.ts, courseService.ts...)
-├── types/            (khớp Response DTO backend)
+├── components/     (components/common/Navbar.tsx, components/vocabulary, components/deck...)
+├── contexts/        (AuthContext.tsx ✅, ThemeContext)
+├── hooks/           (useDebounce, usePagination — useAuthContext nằm ngay trong AuthContext.tsx theo convention mục 2.1)
+├── layouts/         (PublicLayout ✅, UserLayout, AdminLayout)
+├── pages/           (pages/auth/{LoginPage,RegisterPage,ForgotPasswordPage,ResetPasswordPage,VerifyEmailPage}.tsx ✅, DashboardPage.tsx ✅ placeholder, ProfilePage.tsx ✅ — chưa tách pages/dashboard/ vì mới có 1 file, sẽ tách khi Giai đoạn 7 xây nội dung thật)
+├── routes/           (AppRoutes.tsx ✅, PublicRoute.tsx ✅, ProtectedRoute.tsx ✅, AdminRoute)
+├── services/         (authService.ts ✅, userService.ts ✅ đủ 3 method /api/users/me, courseService.ts...)
+├── types/            (api.ts ✅, auth.ts ✅, user.ts ✅ — khớp 1-1 Response/Request DTO backend)
 ├── constants/
 └── styles/
 ```
 
-Access token lưu in-memory (Context), **không** localStorage. Refresh token là httpOnly cookie do backend set (đã implement ở `POST /api/auth/login`, xem mục 9) — Frontend khi gọi API phải bật `withCredentials: true` (axios) để trình duyệt gửi kèm cookie, và origin FE phải khớp `FRONTEND_URL` backend cấu hình (`CorsConfig`, `allowCredentials` bắt buộc đi cùng origin cụ thể, không dùng `*`). Axios interceptor: 401 → thử refresh 1 lần → thất bại → clear context → redirect `/login`.
+**Đã implement (Giai đoạn 2):** Access token lưu in-memory (`api/tokenStore.ts`, module-level variable — không phải React state, vì `axiosClient`'s interceptor chạy ngoài component tree không dùng hook được), **không** localStorage. Refresh token là httpOnly cookie do backend set (`POST /api/auth/login`, xem mục 9) — `axiosClient` bật `withCredentials: true` để trình duyệt gửi kèm cookie, origin FE khớp `FRONTEND_URL` backend cấu hình (`CorsConfig`). Axios response interceptor: 401 (trừ chính các endpoint `/api/auth/**`, tránh vòng lặp refresh vô hạn) → gọi `POST /api/auth/refresh-token` 1 lần (gom các request 401 đồng thời lại tránh gọi refresh nhiều lần song song) → thành công thì set lại token + replay request gốc, thất bại thì `notifyAuthFailure()` cho `AuthContext` biết để clear `user` (không tự điều hướng cứng trong `axiosClient` — `ProtectedRoute` tự redirect khi thấy `user === null`). `AuthContext` khi app khởi động cũng tự gọi `refresh-token` 1 lần để khôi phục phiên đăng nhập sau khi reload trang (vì accessToken in-memory bị mất khi reload). Dùng `react-hook-form` cho Login/Register form theo đúng mục 2.2.
 
 ---
 
@@ -647,7 +647,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | Giai đoạn | Nội dung | Trạng thái |
 |---|---|---|
 | 1. Setup | BaseEntity/AuditableEntity, ApiResponse, GlobalExceptionHandler, env vars, cấu trúc thư mục FE/BE, Swagger, MapStruct, SecurityConfig tối thiểu[^1] | ✅ Hoàn thành |
-| 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE | 🔄 Đang thực hiện — toàn bộ Backend xong (Auth + User Profile), còn Frontend |
+| 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE | ✅ Hoàn thành — Backend + Frontend đầy đủ kể cả Forgot/Reset Password, Verify Email, Profile (mở rộng hơn mô tả gốc theo yêu cầu người dùng)[^2], người dùng đã tự test UI thật trên browser và xác nhận chạy đúng |
 | 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning | ⏳ Chưa bắt đầu |
 | 4. Quiz | Question, QuestionOption, generate động theo `sourceType`, QuizAttempt, chấm điểm, lịch sử | ⏳ Chưa bắt đầu |
 | 5. Deck | Deck, DeckCard, Public/Private, Clone, Flashcard learning modes | ⏳ Chưa bắt đầu |
@@ -661,13 +661,17 @@ Mỗi module triển khai theo quy trình 11 bước: phân tích → entity →
 
 [^1]: Phát sinh ngoài kế hoạch ban đầu khi triển khai thực tế: Spring Security (đã có sẵn trong `pom.xml` từ đầu) tự động khoá mọi endpoint kể cả Swagger UI khi chưa có `SecurityConfig` nào — phải thêm 1 config tối thiểu (chỉ `permitAll` cho `/swagger-ui/**`, `/v3/api-docs/**`) để Swagger dùng được. Sẽ được thay thế bằng JWT filter chain đầy đủ ở Giai đoạn 2.
 
+[^2]: Người dùng xác nhận làm nốt UI Forgot/Reset Password + Verify Email + Profile trong Giai đoạn 2 thay vì dời sang sau, dù mô tả gốc của giai đoạn này ở cột "Nội dung" chỉ liệt kê Register/Login/JWT/Refresh Token/Protected Route.
+
 ---
 
 ## 13. Bước tiếp theo
 
 **Giai đoạn 1 — Project Setup: ✅ Hoàn thành.** Đã có: biến môi trường + JWT secret xoay vòng, `BaseEntity`/`AuditableEntity` + JPA Auditing, `common/constant` (ErrorCode/ErrorMessage/CommonMessage), bộ Exception nghiệp vụ + `GlobalExceptionHandler`, `ApiResponse`/`PageResponse`/`ApiErrorResponse`, Swagger/OpenAPI + MapStruct trong `pom.xml`, `SecurityConfig` tối thiểu, cấu trúc thư mục frontend + axios client + routing skeleton. Toàn bộ đã build/chạy/test thật, đã commit và push lên GitHub (xem lịch sử commit từng repo).
 
-**Giai đoạn 2 — Authentication: 🔄 Đang thực hiện.** Đã xong toàn bộ Backend (Auth + User Profile):
+**Giai đoạn 2 — Authentication: ✅ Hoàn thành** (Backend + Frontend, người dùng đã tự test UI thật trên browser và xác nhận đúng).
+
+Backend (Auth + User Profile):
 
 - Entity `User`/`Role`/`Permission`/`RefreshToken`/`VerificationToken` + repository, `RoleSeeder`.
 - `SecurityConfig` full JWT filter chain (`JwtService`, `JwtAuthenticationFilter`, `JwtAuthenticationEntryPoint`, `JwtAccessDeniedHandler`, `CustomUserDetails`) + `CorsConfig` (credentialed origin cho cookie).
@@ -680,6 +684,14 @@ Mỗi module triển khai theo quy trình 11 bước: phân tích → entity →
 - Unit Test: 71 case toàn backend (`AuthServiceTest` 31, `UserServiceImplTest` 9, còn lại là DTO/exception/mapper) — thành công + toàn bộ exception flow.
 - Đã test thật qua curl + kiểm DB trực tiếp cho toàn bộ 10 endpoint, gồm 2 bug thật phát hiện và fix trong quá trình Auth: (1) `UserRepository.findByUsernameOrEmail` thiếu `JOIN FETCH roles` gây `LazyInitializationException` trong `JwtAuthenticationFilter`; (2) `refreshAccessToken`/token validation thiếu check `null` khi cookie vắng mặt gây `NullPointerException` → 500 thay vì 401.
 
-Còn lại của Giai đoạn 2: toàn bộ Frontend (AuthContext, Login/Register page, ProtectedRoute, axios interceptor refresh token, Profile page).
+Frontend (Auth) — người dùng xác nhận làm nốt toàn bộ (không chỉ đúng phạm vi gốc mục 12), đã tự test UI thật trên browser và xác nhận chạy đúng (bao gồm case chặn login khi tài khoản còn `PENDING_VERIFICATION`, đúng thiết kế):
 
-Bước tiếp theo: Frontend Auth — `AuthContext`, `authService.ts`, Login/Register page, `ProtectedRoute`/`PublicRoute`, axios interceptor (401 → thử refresh 1 lần → thất bại → clear context → redirect `/login`).
+- `api/tokenStore.ts` (access token in-memory), `api/apiError.ts`, `api/axiosClient.ts` (`withCredentials: true` + interceptor tự refresh khi 401, gom request đồng thời tránh gọi refresh nhiều lần song song).
+- `services/authService.ts` (register/login/logout/refreshToken/forgotPassword/resetPassword/verifyEmail), `services/userService.ts` (getMyProfile/updateMyProfile/changePassword) — Component không tự gọi axios, đúng mục 2.2.
+- `contexts/AuthContext.tsx` + `useAuthContext()` — tự động thử khôi phục phiên đăng nhập lúc app khởi động (gọi `refresh-token` bằng cookie).
+- `routes/ProtectedRoute.tsx`, `routes/PublicRoute.tsx`, `AppRoutes.tsx` wiring `AuthProvider` + đủ route: `/login`, `/register`, `/forgot-password`, `/reset-password` (đọc `?token=`, PublicRoute), `/verify-email` (đọc `?token=`, không bọc Public/ProtectedRoute vì là trang xử lý token độc lập trạng thái đăng nhập), `/dashboard`, `/profile` (ProtectedRoute).
+- `pages/auth/{LoginPage,RegisterPage,ForgotPasswordPage,ResetPasswordPage,VerifyEmailPage}.tsx` (dùng `react-hook-form`, mới cài đặt — đúng mục 2.2), `pages/DashboardPage.tsx` (placeholder), `pages/ProfilePage.tsx` (form sửa hồ sơ + form đổi mật khẩu, gọi `refreshUser()` sau khi sửa hồ sơ để đồng bộ lại `AuthContext`), `components/common/Navbar.tsx` (Login/Register hoặc Dashboard/tên user liên kết `/profile`/Đăng xuất).
+- `npm run lint` sạch (đã sửa 1 lỗi thật: `react-hooks/set-state-in-effect` ở `VerifyEmailPage` — gọi `setState` đồng bộ ngay trong effect cho case thiếu token, sửa bằng cách xử lý case đó ở render-time thay vì trong effect), `npm run build` (tsc) pass. Verify contract qua curl cho toàn bộ 7 API Auth + 3 API Profile: field JSON khớp chính xác `types/api.ts`/`auth.ts`/`user.ts`, xác nhận `AccessTokenResponse` không có `refreshToken` (đúng `@JsonIgnore` Backend).
+- Đã test tương tác thật trên browser (`http://localhost:5173`) — người dùng tự bấm thử, xác nhận UI chạy đúng.
+
+Bước tiếp theo: **Giai đoạn 3 — Course System** (mục 12) — `Language`, `Course`, `Lesson`, `Vocabulary`, `Grammar`, Admin CRUD + User view + Lesson learning. Triển khai theo đúng quy trình 11 bước ở mục 12.
