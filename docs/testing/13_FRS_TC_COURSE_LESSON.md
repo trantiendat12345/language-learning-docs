@@ -45,7 +45,7 @@
 
 ## Phần 3 — Test Cases chi tiết
 
-> **Trạng thái implement (2026-07-29):** TC-COURSE-001 → 008, 021, 022 (Course/Lesson Admin CRUD + xem public, filter/pagination, DRAFT không lộ) **đã test được**. TC-COURSE-009 → 017, 019, 020 (Enroll, Complete Lesson, Continue Learning, Course Progress, audio phát âm) **chưa test được** — cần `CourseEnrollment`/`LessonProgress` (chunk sau của Giai đoạn 3) và `Vocabulary` (Vocabulary/Grammar chưa gắn vào Lesson). TC-COURSE-018 (sửa Vocabulary phản ánh vào Lesson) chưa test được vì `Vocabulary` và bảng join `LessonVocabulary` chưa tồn tại.
+> **Trạng thái implement (2026-07-29):** TC-COURSE-001 → 008, 018, 021, 022 (Course/Lesson Admin CRUD + xem public, filter/pagination, DRAFT không lộ, sửa Vocabulary hệ thống phản ánh ngay vào Lesson qua join `LessonVocabulary`) **đã test được**. TC-COURSE-012 **test được một phần** — `GET /api/lessons/{id}` đã trả đầy đủ Vocabulary + Grammar (kèm example) đúng thứ tự `displayOrder`, nhưng phần "Question" chưa có (Quiz thuộc Giai đoạn 4) và chưa có gating theo Enroll (luôn trả đầy đủ cho Lesson PUBLISHED, không phân biệt đã/chưa enroll). TC-COURSE-009 → 011, 013 → 017, 019, 020 (Enroll, Complete Lesson, Continue Learning, Course Progress, preview khi chưa enroll, audio phát âm) **chưa test được** — cần `CourseEnrollment`/`LessonProgress` (chunk sau của Giai đoạn 3).
 
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
