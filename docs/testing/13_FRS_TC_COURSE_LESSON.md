@@ -45,6 +45,8 @@
 
 ## Phần 3 — Test Cases chi tiết
 
+> **Trạng thái implement (2026-07-29):** TC-COURSE-001 → 008, 021, 022 (Course/Lesson Admin CRUD + xem public, filter/pagination, DRAFT không lộ) **đã test được**. TC-COURSE-009 → 017, 019, 020 (Enroll, Complete Lesson, Continue Learning, Course Progress, audio phát âm) **chưa test được** — cần `CourseEnrollment`/`LessonProgress` (chunk sau của Giai đoạn 3) và `Vocabulary` (Vocabulary/Grammar chưa gắn vào Lesson). TC-COURSE-018 (sửa Vocabulary phản ánh vào Lesson) chưa test được vì `Vocabulary` và bảng join `LessonVocabulary` chưa tồn tại.
+
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-COURSE-001 | Danh sách Course chỉ hiện PUBLISHED | Có course DRAFT "Business English" (xem `09_TEST_DATA.md`) | `GET /api/courses` | | Danh sách không chứa "Business English" | Critical |

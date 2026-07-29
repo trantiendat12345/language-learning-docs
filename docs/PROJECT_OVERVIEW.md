@@ -592,13 +592,14 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | PUT | `/api/users/me/password` | protected — ✅ đã implement, revoke toàn bộ RefreshToken cũ sau khi đổi thành công, từ chối nếu newPassword trùng currentPassword |
 | GET | `/api/languages` | public — ✅ đã implement, chỉ trả status=ACTIVE |
 | GET/POST/PUT/DELETE | `/api/admin/languages/**` | admin — ✅ đã implement (list không phân trang — số lượng Language nhỏ), thấy cả INACTIVE |
-| GET | `/api/courses?languageId=&level=&keyword=&page=` | public, pagination |
-| GET | `/api/courses/{id}` | public |
-| POST | `/api/courses/{id}/enroll` | protected |
-| GET/POST/PUT/DELETE | `/api/admin/courses/**` | admin |
-| GET | `/api/courses/{courseId}/lessons` | public |
-| GET | `/api/lessons/{id}` | public (đầy đủ nếu đã enroll, preview nếu chưa) |
-| POST | `/api/lessons/{id}/complete` | protected |
+| GET | `/api/courses?languageId=&level=&keyword=&page=` | public, pagination — ✅ đã implement (`level` map vào field `difficulty`) |
+| GET | `/api/courses/{id}` | public — ✅ đã implement, kèm danh sách Lesson PUBLISHED, DRAFT truy cập trực tiếp → 404 |
+| POST | `/api/courses/{id}/enroll` | protected — ⏳ chưa implement (cần `CourseEnrollment`) |
+| GET/POST/PUT/DELETE | `/api/admin/courses/**` | admin — ✅ đã implement (gồm cả `GET/POST /api/admin/courses/{id}/lessons`) |
+| GET | `/api/courses/{courseId}/lessons` | public — ✅ đã implement, chỉ trả Lesson PUBLISHED |
+| GET | `/api/lessons/{id}` | public — ✅ đã implement **nhưng chưa phân biệt preview/đầy đủ theo Enroll** (chunk hiện tại chưa có Vocabulary/Grammar gắn kèm Lesson nên chưa có gì để ẩn — sẽ bổ sung khi làm Enroll + Vocabulary/Grammar) |
+| POST | `/api/lessons/{id}/complete` | protected — ⏳ chưa implement (cần `LessonProgress`) |
+| GET/PUT/POST/DELETE | `/api/admin/lessons/{id}` | admin — ✅ đã implement (GET/PUT/DELETE 1 Lesson theo id; tạo mới qua `/api/admin/courses/{courseId}/lessons`) |
 | GET | `/api/vocabularies?languageId=&keyword=&page=` | public |
 | GET/POST/PUT/DELETE | `/api/admin/vocabularies/**` | admin |
 | GET | `/api/decks?visibility=PUBLIC&keyword=` | public search deck |
@@ -648,7 +649,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 |---|---|---|
 | 1. Setup | BaseEntity/AuditableEntity, ApiResponse, GlobalExceptionHandler, env vars, cấu trúc thư mục FE/BE, Swagger, MapStruct, SecurityConfig tối thiểu[^1] | ✅ Hoàn thành |
 | 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE | ✅ Hoàn thành — Backend + Frontend đầy đủ kể cả Forgot/Reset Password, Verify Email, Profile (mở rộng hơn mô tả gốc theo yêu cầu người dùng)[^2], người dùng đã tự test UI thật trên browser và xác nhận chạy đúng |
-| 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning | 🔄 Đang thực hiện — Language xong, còn Course/Lesson/Vocabulary/Grammar + luồng Enroll/Complete Lesson |
+| 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning | 🔄 Đang thực hiện — Language + Course + Lesson xong, còn Vocabulary/Grammar + luồng Enroll/Complete Lesson |
 | 4. Quiz | Question, QuestionOption, generate động theo `sourceType`, QuizAttempt, chấm điểm, lịch sử | ⏳ Chưa bắt đầu |
 | 5. Deck | Deck, DeckCard, Public/Private, Clone, Flashcard learning modes | ⏳ Chưa bắt đầu |
 | 6. Spaced Repetition | UserVocabularyProgress, ReviewLog, SM-2, Review Today | ⏳ Chưa bắt đầu |
@@ -703,6 +704,20 @@ Frontend (Auth) — người dùng xác nhận làm nốt toàn bộ (không ch�
 - Đã test thật qua curl + kiểm DB: public list chỉ thấy `ACTIVE`, Admin thấy cả `INACTIVE`, USER thường bị chặn 403 ở `/api/admin/**`, duplicate code bị từ chối 409, soft-delete hoạt động đúng (`@SQLRestriction` ẩn khỏi mọi query kể cả của Admin).
 - **Phát hiện và fix 1 bug thật ảnh hưởng toàn hệ thống:** `JpaAuditingConfig.auditorProvider()` từ Giai đoạn 1 luôn trả `Optional.empty()` (code cũ ghi rõ TODO "sau khi có SecurityContext thật thì sửa" nhưng chưa từng được hoàn thiện) — nghĩa là `createdBy`/`updatedBy` **chưa từng hoạt động đúng cho bất kỳ entity nào** kể từ khi có Auth (Giai đoạn 2). Đã sửa để đọc `userId` từ `CustomUserDetails` trong `SecurityContext`, verify lại bằng curl thật: tạo mới → `createdBy` đúng id admin, sửa → `updatedBy` đúng id admin, request ẩn danh (vd tự đăng ký) → cả 2 đều `null` như kỳ vọng. `docs/testing/07_DATA_DICTIONARY.md`/`21_FRS_TC_ADMIN.md` đã mô tả đúng hành vi này từ trước — chỉ code sai, tài liệu không cần sửa.
 
-Còn lại của Giai đoạn 3: `Course` + `Lesson` (phụ thuộc `Language`), `Vocabulary` + `Grammar` + `Tag`/`VocabularyRelation`, và luồng `Enroll`/`Complete Lesson` (`CourseEnrollment`, `LessonProgress` — theo FRS `13_FRS_TC_COURSE_LESSON.md` các entity này gắn liền với "Lesson learning" ở Giai đoạn 3, dù bảng roadmap liệt kê `CourseEnrollment`/`LessonProgress` ở Giai đoạn 7; XP awarding khi hoàn thành Lesson (`XpLog`) vẫn hoãn đúng lịch Giai đoạn 7 vì cần hạ tầng D8 chưa xây).
+Tiếp theo — `Course` + `Lesson`:
+
+- Entity `Course` (FK `Language`, `slug` UK, `difficulty` varchar tự do vì CEFR/JLPT khác thang, `status` DRAFT/PUBLISHED/ARCHIVED) và `Lesson` (FK `Course` 1 chiều — không `@OneToMany` ngược tránh circular JSON mục 10.2, `status` DRAFT/PUBLISHED/ARCHIVED).
+- `CourseSpecification` (filter động languageId/difficulty/keyword theo đúng mẫu "VocabularySpecification" ở mục 7.1) + `CourseRepository extends JpaSpecificationExecutor`.
+- `CourseResponse`/`CourseSummaryResponse`, `LessonResponse`/`LessonSummaryResponse` — áp dụng đúng convention Response đầy đủ/rút gọn (mục 2.1 `docs/dev/CODING_CONVENTIONS.md`) lần đầu tiên trong dự án.
+- 7 endpoint: `GET /api/courses` (filter+pagination qua `PageResponse`), `GET /api/courses/{id}` (kèm Lesson PUBLISHED), `GET /api/courses/{courseId}/lessons`, `GET /api/lessons/{id}`, `GET/POST/PUT/DELETE /api/admin/courses/**` (gồm tạo/xem Lesson lồng trong Course), `GET/PUT/DELETE /api/admin/lessons/{id}`.
+- Course/Lesson DRAFT truy cập trực tiếp bằng id → 404 (không tiết lộ tồn tại, đúng TC-COURSE-006/013).
+- 22 Unit Test (`CourseServiceImplTest` 11, `LessonServiceImplTest` 11 — 103 test toàn backend).
+- Đã test thật qua curl + DB: filter/pagination đúng, PUBLISHED/DRAFT visibility đúng ở mọi tầng (list, detail, nested lesson list, lesson trực tiếp), role ADMIN/USER đúng, duplicate slug 409, validate slug pattern, soft-delete đúng. Không phát hiện bug mới.
+- **Sửa 2 chỗ lệch so với `docs/testing/07_DATA_DICTIONARY.md`** (spec có trước, code phải khớp): `Course.slug` code ban đầu để `length=220` thay vì `200` theo spec — đã sửa; `LessonStatus` code ban đầu thiếu `ARCHIVED` (chỉ có DRAFT/PUBLISHED) trong khi spec liệt kê 3 giá trị — đã thêm.
+- **Giới hạn phạm vi cố tình:** `GET /api/lessons/{id}` chưa phân biệt preview/đầy đủ theo Enroll — chunk này chưa có Vocabulary/Grammar gắn kèm Lesson nên chưa có nội dung để ẩn, sẽ làm cùng lúc với Enroll + Vocabulary/Grammar ở chunk sau.
+
+Còn lại của Giai đoạn 3: `Vocabulary` + `Grammar` + `Tag`/`VocabularyRelation`, và luồng `Enroll`/`Complete Lesson` (`CourseEnrollment`, `LessonProgress` — theo FRS `13_FRS_TC_COURSE_LESSON.md` các entity này gắn liền với "Lesson learning" ở Giai đoạn 3, dù bảng roadmap liệt kê `CourseEnrollment`/`LessonProgress` ở Giai đoạn 7; XP awarding khi hoàn thành Lesson (`XpLog`) vẫn hoãn đúng lịch Giai đoạn 7 vì cần hạ tầng D8 chưa xây).
+
+Bước tiếp theo: `Vocabulary` + `Grammar` (phụ thuộc `Language`, và `LessonVocabulary`/`Grammar` phụ thuộc `Lesson` vừa xong).
 
 Bước tiếp theo: `Course` + `Lesson` (Admin CRUD + User view, phụ thuộc `Language` vừa xong).
