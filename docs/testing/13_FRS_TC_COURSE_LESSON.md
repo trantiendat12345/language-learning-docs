@@ -20,7 +20,7 @@
 
 **API:** `GET /api/lessons/{id}` (public nhưng nội dung đầy đủ chỉ khi đã enroll), `POST /api/lessons/{id}/complete` (protected)
 **Business Rule quan trọng:**
-- Nếu **chưa enroll** Course chứa Lesson đó → chỉ thấy preview (không thấy đầy đủ Vocabulary/Grammar/Question), hoặc bị chặn tuỳ thiết kế — xác nhận cụ thể khi code, nhưng phải nhất quán.
+- Nếu **chưa enroll** Course chứa Lesson đó → chỉ thấy preview (không thấy đầy đủ Vocabulary/Grammar/Question) — **đã chốt khi code (2026-07-29): preview, không chặn 403**, vẫn trả `200` với field gốc của Lesson (title/description/video/audio...), chỉ `vocabularies`/`grammars` rỗng, kèm field `enrolled=false` để FE phân biệt "chưa enroll" với "Lesson thật sự chưa có nội dung". Anonymous (chưa đăng nhập) luôn coi như chưa enroll.
 - Vocabulary/Grammar hiển thị trong Lesson lấy qua bảng join `LessonVocabulary` — sửa 1 `Vocabulary` (Admin sửa) phải phản ánh ngay ở mọi Lesson đang dùng từ đó (xem D1/D9 mục 9 ở `04_BUSINESS_RULES_GLOBAL.md`).
 - Hoàn thành Lesson (`POST .../complete`) chỉ tính 1 lần — hoàn thành lại (học lại) không cộng thêm XP (xem `04_BUSINESS_RULES_GLOBAL.md` mục 1) nhưng vẫn cho phép học lại nội dung.
 - Sau khi hoàn thành hết các Lesson `PUBLISHED` trong 1 Course → `CourseEnrollment.status` chuyển `COMPLETED`, `progressPercent = 100`.
@@ -45,7 +45,7 @@
 
 ## Phần 3 — Test Cases chi tiết
 
-> **Trạng thái implement (2026-07-29):** TC-COURSE-001 → 008, 018, 021, 022 (Course/Lesson Admin CRUD + xem public, filter/pagination, DRAFT không lộ, sửa Vocabulary hệ thống phản ánh ngay vào Lesson qua join `LessonVocabulary`) **đã test được**. TC-COURSE-012 **test được một phần** — `GET /api/lessons/{id}` đã trả đầy đủ Vocabulary + Grammar (kèm example) đúng thứ tự `displayOrder`, nhưng phần "Question" chưa có (Quiz thuộc Giai đoạn 4) và chưa có gating theo Enroll (luôn trả đầy đủ cho Lesson PUBLISHED, không phân biệt đã/chưa enroll). TC-COURSE-009 → 011, 013 → 017, 019, 020 (Enroll, Complete Lesson, Continue Learning, Course Progress, preview khi chưa enroll, audio phát âm) **chưa test được** — cần `CourseEnrollment`/`LessonProgress` (chunk sau của Giai đoạn 3).
+> **Trạng thái implement (2026-07-29):** TC-COURSE-001 → 011, 013 → 016, 018, 021, 022 (Course/Lesson Admin CRUD + xem public, filter/pagination, DRAFT không lộ, sửa Vocabulary hệ thống phản ánh ngay vào Lesson qua join `LessonVocabulary`, Enroll idempotent, Complete Lesson idempotent + tính đúng `progressPercent`/chuyển `COMPLETED`, preview khi chưa enroll) **đã test được**. TC-COURSE-012 **test được một phần** — `GET /api/lessons/{id}` đã gating đúng theo Enroll và trả đầy đủ Vocabulary + Grammar (kèm example) đúng thứ tự `displayOrder` khi đã enroll, nhưng phần "Question" chưa có (Quiz thuộc Giai đoạn 4). TC-COURSE-017, 020 (Continue Learning, Course Progress hiển thị % ở Course Detail) **chưa test được** — cố tình chưa làm, cần Progress Dashboard tổng hợp (Giai đoạn 7, xem giới hạn phạm vi ở `docs/PROJECT_OVERVIEW.md` mục 13). TC-COURSE-019 (audio phát âm) thuộc phạm vi khác, chưa test.
 
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|

@@ -62,6 +62,12 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 |---|---|---|
 | `OWNERSHIP_VIOLATION` | 403 | TC-DECK-004/006/012, TC-NOTI-007 |
 
+### Course / Lesson Progress (Giai đoạn 3)
+
+| `errorCode` | HTTP `code` | Test Case liên quan |
+|---|---|---|
+| `COURSE_NOT_ENROLLED` | 400 | `POST /api/lessons/{id}/complete` khi chưa `POST /api/courses/{id}/enroll` — lỗi nghiệp vụ (thiếu bước tiền đề), không phải lỗi quyền nên dùng 400 thay vì 403 |
+
 ### Deck / Quiz / Review (ví dụ mở rộng khi code tới module đó)
 
 | `errorCode` | HTTP `code` | Test Case liên quan |
