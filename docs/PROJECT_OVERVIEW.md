@@ -600,8 +600,8 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | GET | `/api/lessons/{id}` | public — ✅ đã implement **nhưng chưa phân biệt preview/đầy đủ theo Enroll** (chunk hiện tại chưa có Vocabulary/Grammar gắn kèm Lesson nên chưa có gì để ẩn — sẽ bổ sung khi làm Enroll + Vocabulary/Grammar) |
 | POST | `/api/lessons/{id}/complete` | protected — ⏳ chưa implement (cần `LessonProgress`) |
 | GET/PUT/POST/DELETE | `/api/admin/lessons/{id}` | admin — ✅ đã implement (GET/PUT/DELETE 1 Lesson theo id; tạo mới qua `/api/admin/courses/{courseId}/lessons`) |
-| GET | `/api/vocabularies?languageId=&keyword=&page=` | public |
-| GET/POST/PUT/DELETE | `/api/admin/vocabularies/**` | admin |
+| GET | `/api/vocabularies?languageId=&keyword=&page=` | public — ✅ đã implement, chỉ trả từ hệ thống (`ownerId` null) status=ACTIVE |
+| GET/POST/PUT/DELETE | `/api/admin/vocabularies/**` | admin — ✅ đã implement, chỉ tạo từ hệ thống (`ownerId` luôn null — custom word của User thuộc luồng Deck ở Giai đoạn 5) |
 | GET | `/api/decks?visibility=PUBLIC&keyword=` | public search deck |
 | GET/POST/PUT/DELETE | `/api/decks/**` | protected, ownership check |
 | POST | `/api/decks/{id}/cards` | protected |
@@ -649,7 +649,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 |---|---|---|
 | 1. Setup | BaseEntity/AuditableEntity, ApiResponse, GlobalExceptionHandler, env vars, cấu trúc thư mục FE/BE, Swagger, MapStruct, SecurityConfig tối thiểu[^1] | ✅ Hoàn thành |
 | 2. Authentication | User, Role, Permission (schema), Register/Login/JWT/Refresh Token, Protected Route FE | ✅ Hoàn thành — Backend + Frontend đầy đủ kể cả Forgot/Reset Password, Verify Email, Profile (mở rộng hơn mô tả gốc theo yêu cầu người dùng)[^2], người dùng đã tự test UI thật trên browser và xác nhận chạy đúng |
-| 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning | 🔄 Đang thực hiện — Language + Course + Lesson xong, còn Vocabulary/Grammar + luồng Enroll/Complete Lesson |
+| 3. Course System | Language, Course, Lesson, Vocabulary, Grammar — Admin CRUD + User view + Lesson learning | 🔄 Đang thực hiện — Language + Course + Lesson + Vocabulary xong, còn Grammar/LessonVocabulary/Tag + luồng Enroll/Complete Lesson |
 | 4. Quiz | Question, QuestionOption, generate động theo `sourceType`, QuizAttempt, chấm điểm, lịch sử | ⏳ Chưa bắt đầu |
 | 5. Deck | Deck, DeckCard, Public/Private, Clone, Flashcard learning modes | ⏳ Chưa bắt đầu |
 | 6. Spaced Repetition | UserVocabularyProgress, ReviewLog, SM-2, Review Today | ⏳ Chưa bắt đầu |
@@ -716,8 +716,16 @@ Tiếp theo — `Course` + `Lesson`:
 - **Sửa 2 chỗ lệch so với `docs/testing/07_DATA_DICTIONARY.md`** (spec có trước, code phải khớp): `Course.slug` code ban đầu để `length=220` thay vì `200` theo spec — đã sửa; `LessonStatus` code ban đầu thiếu `ARCHIVED` (chỉ có DRAFT/PUBLISHED) trong khi spec liệt kê 3 giá trị — đã thêm.
 - **Giới hạn phạm vi cố tình:** `GET /api/lessons/{id}` chưa phân biệt preview/đầy đủ theo Enroll — chunk này chưa có Vocabulary/Grammar gắn kèm Lesson nên chưa có nội dung để ẩn, sẽ làm cùng lúc với Enroll + Vocabulary/Grammar ở chunk sau.
 
-Còn lại của Giai đoạn 3: `Vocabulary` + `Grammar` + `Tag`/`VocabularyRelation`, và luồng `Enroll`/`Complete Lesson` (`CourseEnrollment`, `LessonProgress` — theo FRS `13_FRS_TC_COURSE_LESSON.md` các entity này gắn liền với "Lesson learning" ở Giai đoạn 3, dù bảng roadmap liệt kê `CourseEnrollment`/`LessonProgress` ở Giai đoạn 7; XP awarding khi hoàn thành Lesson (`XpLog`) vẫn hoãn đúng lịch Giai đoạn 7 vì cần hạ tầng D8 chưa xây).
+Tiếp theo — `Vocabulary` (cố tình tách riêng khỏi `Grammar`/`LessonVocabulary` để tránh phải sửa lại `LessonResponse`/`LessonMapper`/`LessonServiceImpl` 2 lần trong 1 lượt — xem giới hạn phạm vi bên dưới):
 
-Bước tiếp theo: `Vocabulary` + `Grammar` (phụ thuộc `Language`, và `LessonVocabulary`/`Grammar` phụ thuộc `Lesson` vừa xong).
+- Entity `Vocabulary` (kế thừa `AuditableEntity`, FK `Language` bắt buộc, FK `owner` -> `User` nullable — null = từ hệ thống, có giá trị = từ custom của User theo D1, field đã có sẵn để không phải đổi schema khi làm Deck ở Giai đoạn 5) + `VocabularyRepository extends JpaSpecificationExecutor`, `VocabularySpecification` (`hasStatus`/`isSystemWord`/`hasLanguageId`/`wordOrMeaningContains`).
+- `VocabularyResponse`/`VocabularySummaryResponse`, `VocabularyMapper` (MapStruct), `VocabularyService`/`VocabularyServiceImpl` (tách interface+impl đúng convention CRUD 1 entity).
+- 6 endpoint: `GET /api/vocabularies` (filter languageId/keyword + pagination, chỉ trả từ hệ thống status=ACTIVE), `GET /api/vocabularies/{id}` (404 nếu không tồn tại/không phải hệ thống/không ACTIVE — không tiết lộ tồn tại), `GET/POST/PUT/DELETE /api/admin/vocabularies/**` (luôn tạo `owner=null`).
+- `SecurityConfig` thêm `GET /api/vocabularies/**` vào nhóm permitAll theo HTTP method.
+- 12 Unit Test cho `VocabularyServiceImpl` (115 test toàn backend).
+- Đã test thật qua curl + DB: filter languageId/keyword đúng, `isSystemWord()` xác nhận loại đúng từ có `owner_id` khác null khỏi cả public list lẫn public search (Admin vẫn thấy), ACTIVE/ARCHIVED visibility đúng ở list lẫn detail, role ADMIN/USER/anonymous đúng (403/401), validation lỗi field bắt buộc, soft-delete đúng, audit field `createdBy`/`updatedBy` đúng. Đối chiếu `docs/testing/07_DATA_DICTIONARY.md` mục Vocabulary — khớp hoàn toàn, không phát hiện lệch.
+- **Giới hạn phạm vi cố tình:** chunk này KHÔNG bao gồm tạo custom word của User (thuộc luồng thêm-từ-vào-Deck ở Giai đoạn 5), KHÔNG bao gồm `Grammar`/`GrammarExample`/`LessonVocabulary`/`Tag`/`VocabularyTag`/`VocabularyRelation` — các phần này sẽ làm ở chunk kế tiếp cùng với việc gắn nội dung Vocabulary/Grammar vào `LessonResponse`.
 
-Bước tiếp theo: `Course` + `Lesson` (Admin CRUD + User view, phụ thuộc `Language` vừa xong).
+Còn lại của Giai đoạn 3: `Grammar` + `GrammarExample` + `LessonVocabulary` (gắn Vocabulary/Grammar vào nội dung Lesson — cần sửa lại `LessonResponse`/`LessonMapper`/`LessonServiceImpl`), `Tag`/`VocabularyTag`/`VocabularyRelation`, và luồng `Enroll`/`Complete Lesson` (`CourseEnrollment`, `LessonProgress` — theo FRS `13_FRS_TC_COURSE_LESSON.md` các entity này gắn liền với "Lesson learning" ở Giai đoạn 3, dù bảng roadmap liệt kê `CourseEnrollment`/`LessonProgress` ở Giai đoạn 7; XP awarding khi hoàn thành Lesson (`XpLog`) vẫn hoãn đúng lịch Giai đoạn 7 vì cần hạ tầng D8 chưa xây).
+
+Bước tiếp theo: `Grammar` + `GrammarExample` + `LessonVocabulary` (phụ thuộc `Lesson`/`Vocabulary` vừa xong; sẽ sửa lại `LessonResponse` để gắn kèm nội dung Vocabulary/Grammar).
