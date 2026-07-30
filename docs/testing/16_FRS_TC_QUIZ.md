@@ -37,6 +37,8 @@
 
 ## Phần 3 — Test Cases chi tiết
 
+> **Trạng thái implement (2026-07-30):** TC-QUIZ-001 → 007, 009 → 016, 018, 020 → 023 (generate/submit/history cho `sourceType=LESSON`, type MULTIPLE_CHOICE/FILL_BLANK, ẩn đáp án đúng, chấm điểm đúng kể cả bỏ qua câu, ownership 404, out-of-scope 400) **đã test được**. TC-QUIZ-008 (Generate Quiz từ Deck) **chưa test được** — `sourceType=DECK` cố tình trả 400 vì Deck chưa tồn tại (Giai đoạn 5). TC-QUIZ-017, 019 **test được một phần** — `accuracy=100%` tính đúng nhưng `xpEarned` luôn `0` (XP thật + `XpLog` cần hạ tầng D8, hoãn đúng lịch Giai đoạn 7, xem `docs/PROJECT_OVERVIEW.md` mục 13). `questionCount` diễn giải từ `10|20|50|ALL` (FRS) sang `Integer` nullable (bỏ trống = Tất cả) phía backend — không đổi hành vi, chỉ đổi kiểu field trong request JSON.
+
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-QUIZ-001 | Generate Quiz 10 câu từ Lesson | Lesson 1 có ≥ 10 Question (xem `09_TEST_DATA.md` mục 8) | `POST /api/quizzes/generate` sourceType=LESSON, questionCount=10 | | Trả đúng 10 câu, không trùng lặp câu nào trong danh sách | Critical |

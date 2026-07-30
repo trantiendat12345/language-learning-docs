@@ -68,14 +68,19 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 |---|---|---|
 | `COURSE_NOT_ENROLLED` | 400 | `POST /api/lessons/{id}/complete` khi chưa `POST /api/courses/{id}/enroll` — lỗi nghiệp vụ (thiếu bước tiền đề), không phải lỗi quyền nên dùng 400 thay vì 403 |
 
-### Deck / Quiz / Review (ví dụ mở rộng khi code tới module đó)
+### Quiz (Giai đoạn 4)
+
+| `errorCode` | HTTP `code` | Test Case liên quan |
+|---|---|---|
+| `QUIZ_ANSWER_OUT_OF_SCOPE` | 400 | TC-QUIZ-023 — `POST /api/quizzes/attempts` có `questionId` không thuộc đúng `sourceType`/`sourceId` đã khai báo (chặn gian lận) |
+| *(không phải errorCode)* Nguồn không đủ câu theo `questionCount` | 200 | TC-QUIZ-003 — KHÔNG dùng errorCode/exception (vẫn là thành công), trả `QuizGenerateResponse{requestedCount, actualCount}` để FE tự so sánh và hiển thị cảnh báo |
+
+### Deck / Review (ví dụ mở rộng khi code tới module đó)
 
 | `errorCode` | HTTP `code` | Test Case liên quan |
 |---|---|---|
 | `DECK_CARD_ALREADY_EXISTS` | 400/409 | TC-DECK-009 |
 | `DECK_CLONE_SOURCE_NOT_PUBLIC` | 403/404 | TC-DECK-019 |
-| `QUIZ_INSUFFICIENT_QUESTIONS` | 200 (kèm cảnh báo, không phải lỗi cứng) | TC-QUIZ-003 |
-| `QUIZ_ANSWER_OUT_OF_SCOPE` | 400 | TC-QUIZ-023 |
 
 > **Quy tắc bổ sung dòng mới:** khi implement 1 module và cần 1 error code chưa có trong bảng, thêm ngay vào đây trong cùng commit — không để `errorCode` "trôi nổi" chỉ tồn tại trong code.
 
