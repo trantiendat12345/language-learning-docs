@@ -41,6 +41,8 @@
 
 ## Phần 3 — Test Cases chi tiết
 
+> **Trạng thái implement (2026-07-30):** TC-SRS-001 → 012, 015, 016 (Review Today, đánh giá 4 loại rating, SM-2 rút gọn, `nextReviewDate`, tiến trình dùng chung giữa Lesson/Deck theo D2, ReviewLog append-only, 401/400) **đã test được**. TC-SRS-017 test được nhưng đơn giản hoá — Mastery Level tính thuần theo `repetitionCount` (không kết hợp `easeFactor`/`forgotCount`), xem `docs/PROJECT_OVERVIEW.md` mục 13 giới hạn phạm vi. TC-SRS-013, 014 (XP, `UserDailyActivity`) **chưa test được** — hoãn Giai đoạn 7 (cần `XpLog`/D8). TC-SRS-018 (timezone 23:59 vs 00:01) **chưa test được** — cần `UserDailyActivity` (Giai đoạn 7); riêng `nextReviewDate`/`lastReviewDate` của `UserVocabularyProgress` đã tôn trọng timezone user (`LocalDate.now(ZoneId.of(user.getTimezone()))`).
+
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-SRS-001 | Review Today trả đúng danh sách từ đến hạn | user01 có từ "family" với `nextReviewDate=hôm nay` (xem `09_TEST_DATA.md`) | `GET /api/review/today` | | Danh sách chứa "family" | Critical |

@@ -46,7 +46,7 @@
 
 ## Phần 3 — Test Cases chi tiết
 
-> **Trạng thái implement (2026-07-30):** TC-DECK-001 → 020 (CRUD Deck + ownership, thêm/xoá từ vào Deck kể cả tạo từ custom, Public search, Clone + độc lập với gốc) **đã test được**. TC-DECK-021 → 025 (Flashcard learning modes Normal/Reverse/Shuffle, đánh giá Forgot/Hard/Good/Easy) **chưa test được** — cần `UserVocabularyProgress`/thuật toán SM-2 (Giai đoạn 6, xem `docs/PROJECT_OVERVIEW.md` mục 13 và `15_FRS_TC_SRS_REVIEW.md`).
+> **Trạng thái implement (2026-07-30):** TC-DECK-001 → 020 (CRUD Deck + ownership, thêm/xoá từ vào Deck kể cả tạo từ custom, Public search, Clone + độc lập với gốc) **đã test được**. TC-DECK-024 (đánh giá Flashcard tạo `UserVocabularyProgress`) nay **đã test được** qua `POST /api/review/{vocabularyId}` (Giai đoạn 6, xem `15_FRS_TC_SRS_REVIEW.md`) — không phải API riêng của Deck, dùng chung bất kể từ đến từ Lesson hay Deck (D2). TC-DECK-021 → 023 (chế độ hiển thị Normal/Reverse/Shuffle) là FE tự render `GET /api/decks/{id}/cards` theo nhiều kiểu, không cần backend riêng — chưa có FE nên chưa test E2E được. TC-DECK-025 (Empty State) đã đúng ở tầng backend (`GET .../cards` trả mảng rỗng, không lỗi), phần hiển thị Empty State là FE.
 
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
