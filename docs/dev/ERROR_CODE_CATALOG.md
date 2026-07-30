@@ -60,7 +60,7 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 
 | `errorCode` | HTTP `code` | Test Case liên quan |
 |---|---|---|
-| `OWNERSHIP_VIOLATION` | 403 | TC-DECK-004/006/012, TC-NOTI-007 |
+| `OWNERSHIP_VIOLATION` | 403 | TC-DECK-004/006/012, TC-NOTI-007 — ✅ đã implement (Giai đoạn 5, `OwnershipViolationException` dùng chung, đặt ở `exception/` top-level để module sau tái sử dụng). Riêng GET đọc tài nguyên private của người khác (TC-DECK-016/019) dùng `ResourceNotFoundException` (404) thay vì `OwnershipViolationException` — cố ý ẩn sự tồn tại, khớp carve-out ở `docs/testing/04_BUSINESS_RULES_GLOBAL.md` mục 6 |
 
 ### Course / Lesson Progress (Giai đoạn 3)
 

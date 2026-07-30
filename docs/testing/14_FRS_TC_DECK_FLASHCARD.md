@@ -46,6 +46,8 @@
 
 ## Phần 3 — Test Cases chi tiết
 
+> **Trạng thái implement (2026-07-30):** TC-DECK-001 → 020 (CRUD Deck + ownership, thêm/xoá từ vào Deck kể cả tạo từ custom, Public search, Clone + độc lập với gốc) **đã test được**. TC-DECK-021 → 025 (Flashcard learning modes Normal/Reverse/Shuffle, đánh giá Forgot/Hard/Good/Easy) **chưa test được** — cần `UserVocabularyProgress`/thuật toán SM-2 (Giai đoạn 6, xem `docs/PROJECT_OVERVIEW.md` mục 13 và `15_FRS_TC_SRS_REVIEW.md`).
+
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-DECK-001 | Tạo Deck thành công | Đã login user01 | `POST /api/decks` | title="My New Deck", languageId=en | 200, Deck tạo với ownerId=user01, visibility=PRIVATE mặc định | Critical |
