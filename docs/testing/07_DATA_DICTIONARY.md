@@ -211,10 +211,10 @@
 
 | Entity | Field đáng chú ý | Ràng buộc |
 |---|---|---|
-| Favorite | `userId`, `targetType` (`COURSE`/`DECK`/`VOCABULARY`), `targetId` | Unique `(userId, targetType, targetId)` |
-| ActivityHistory | `userId`, `targetType`, `targetId`, `action` (`VIEWED`/`LEARNED`/`REVIEWED`), `occurredAt` | Append-only, có thể giới hạn số bản ghi hiển thị gần nhất (vd 50) |
-| Notification | `userId` (nullable = broadcast toàn hệ thống), `type`, `title`, `message`, `linkUrl`, `isRead` | |
-| StudyReminder | `userId`, `type` (`STUDY`/`FLASHCARD`/`REVIEW`), `reminderTime`, `daysOfWeek`, `channel` (`IN_APP`/`EMAIL`/`PUSH`), `isActive` | MVP chỉ hiện thực `IN_APP` |
+| Favorite | `userId`, `targetType` (`COURSE`/`DECK`/`VOCABULARY`), `targetId`, `favoritedAt` | Unique `(userId, targetType, targetId)` — ✅ **đã có trong code** (Giai đoạn 8) |
+| ActivityHistory | `userId`, `targetType`, `targetId`, `action` (`VIEWED`/`LEARNED`/`REVIEWED`), `occurredAt` | Append-only, có thể giới hạn số bản ghi hiển thị gần nhất (vd 50) — ⏳ **Chưa có trong code** |
+| Notification | `userId` (nullable = broadcast toàn hệ thống), `type`, `title`, `message`, `linkUrl`, `isRead` | ⏳ **Chưa có trong code** |
+| StudyReminder | `userId`, `type` (`STUDY`/`FLASHCARD`/`REVIEW`), `reminderTime`, `daysOfWeek`, `channel` (`IN_APP`/`EMAIL`/`PUSH`), `isActive` | MVP chỉ hiện thực `IN_APP` — ⏳ **Chưa có trong code** |
 
 ## 7. Trường Audit (áp dụng cho Content/Master data — xem D9)
 

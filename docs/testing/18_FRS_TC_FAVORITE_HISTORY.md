@@ -29,6 +29,8 @@
 
 ## Phần 3 — Test Cases chi tiết
 
+> **Trạng thái implement (2026-07-31):** Mục 1.1 Favorite **đã test được** — TC-FAV-001 → 009 đã test qua curl thật. TC-FAV-002 (favorite trùng lặp): chốt **idempotent, trả 200 bản ghi đã có** (không tạo trùng, không lỗi 400). TC-FAV-005 (favorite Deck Private của người khác): chốt **404** (không phải 403) — tái dùng đúng quy tắc "không tiết lộ tồn tại" đã áp dụng cho `GET /api/decks/{id}` (xem `14_FRS_TC_DECK_FLASHCARD.md`). TC-FAV-009 (đối tượng đã bị xoá mềm): chốt **ẩn khỏi danh sách** (không hiển thị trạng thái "nội dung không còn tồn tại" — đơn giản hoá, để dành khi có nhu cầu UX cụ thể hơn từ FE). Mục 1.2 History **chưa có trong code** — TC-FAV-010 → 015 chưa test được, xem `docs/PROJECT_OVERVIEW.md` mục 13 (bước tiếp theo).
+
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-FAV-001 | Favorite 1 Course | Đã login user01 | `POST /api/favorites` targetType=COURSE, targetId | | 200, tạo bản ghi Favorite mới | High |
