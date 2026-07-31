@@ -40,6 +40,7 @@
 ### RefreshToken
 | Field | Kiểu | Ghi chú |
 |---|---|---|
+| userId | bigint FK | Bắt buộc — 1 User có thể có nhiều RefreshToken (nhiều thiết bị) |
 | tokenHash | varchar | Token thật **không** lưu plaintext trong DB |
 | expiresAt | datetime | |
 | revoked | boolean | Set true khi logout hoặc phát hiện bất thường |
@@ -47,6 +48,7 @@
 ### VerificationToken
 | Field | Kiểu | Ghi chú |
 |---|---|---|
+| userId | bigint FK | Bắt buộc |
 | type | enum | `EMAIL_VERIFY` / `PASSWORD_RESET` |
 | expiresAt | datetime | Test boundary: dùng token sau khi hết hạn phải bị từ chối |
 | usedAt | datetime, nullable | Token dùng 1 lần — sau khi có `usedAt`, dùng lại phải bị từ chối |
@@ -113,6 +115,8 @@
 | GrammarExample | `grammarId`, `exampleText`, `translation`, `note` | 1 Grammar có nhiều example |
 
 ### Tag / VocabularyTag / VocabularyRelation
+⏳ **Chưa có trong code** — hoãn sang Phase 2 (`docs/testing/02_FEATURE_LIST.md` mục 3.10 ghi rõ P2), quyết định chốt khi code Giai đoạn 3, xem `docs/PROJECT_OVERVIEW.md` mục 11/12/13. Bảng dưới đây là thiết kế dự kiến, chưa có entity/migration nào tương ứng.
+
 | Entity | Ghi chú |
 |---|---|
 | Tag | `name` unique |
@@ -167,6 +171,8 @@
 | type | enum | ✅ | `MULTIPLE_CHOICE`/`FILL_BLANK`/`TYPING`/`LISTENING`/`MATCHING`/`REORDER`/`IMAGE_CHOICE`/`AUDIO_CHOICE` |
 | vocabularyId | bigint FK | ❌ | Nullable — có khi câu hỏi gắn trực tiếp với 1 từ |
 | promptText | text | ✅ (trừ loại thuần audio/image) | |
+| promptAudioUrl | varchar(500) | ❌ | Nullable — dùng cho `LISTENING`/`AUDIO_CHOICE` |
+| promptImageUrl | varchar(500) | ❌ | Nullable — dùng cho `IMAGE_CHOICE` |
 | explanation | text | ❌ | Hiển thị sau khi trả lời |
 | difficulty | varchar(20) | ❌ | |
 
@@ -198,8 +204,8 @@
 
 | Entity | Field đáng chú ý | Ràng buộc |
 |---|---|---|
-| CourseEnrollment | `userId`, `courseId`, `status`, `progressPercent` (0–100) | Unique `(userId, courseId)` |
-| LessonProgress | `userId`, `lessonId`, `status` (`NOT_STARTED`/`IN_PROGRESS`/`COMPLETED`) | Unique `(userId, lessonId)` |
+| CourseEnrollment | `userId`, `courseId`, `status`, `progressPercent` (0–100), `enrolledAt`, `updatedAt` | Unique `(userId, courseId)` |
+| LessonProgress | `userId`, `lessonId`, `status` (`NOT_STARTED`/`IN_PROGRESS`/`COMPLETED`), `completedAt` (nullable) | Unique `(userId, lessonId)` |
 | UserDailyActivity | `userId`, `activityDate` (date, theo timezone user), `studyMinutes`, `wordsLearned`, `xpEarned` (chỉ cộng dồn phần XP thưởng `DAILY_GOAL_MET`, không phải tổng mọi XP kiếm được trong ngày), `goalMet` | Unique `(userId, activityDate)` |
 | XpLog | `userId`, `amount` (có thể âm nếu về sau có trừ XP — MVP chỉ cộng), `reason` (`VOCAB_LEARNED`/`LESSON_COMPLETED`/`QUIZ_COMPLETED`/`REVIEW_DONE`/`DAILY_GOAL_MET`/`ACHIEVEMENT`), `sourceId`, `earnedAt` | Append-only |
 | Achievement | `code` (unique), `conditionType`, `conditionValue`, `xpReward`, `coinReward` | ⏳ **Chưa có trong code** — Phase 2, xem `docs/PROJECT_OVERVIEW.md` mục 11 |
@@ -218,7 +224,7 @@
 
 ## 7. Trường Audit (áp dụng cho Content/Master data — xem D9)
 
-Các entity ở mục 1–2–3 (trừ log/transaction) đều có thêm các field kế thừa từ `AuditableEntity`:
+Áp dụng cho các entity thuộc nhóm **Content/Master data** (không phải theo số thứ tự mục — 1 mục có thể trộn cả 2 loại): `User`, `Role`, `Permission`, `Language`, `Course`, `Lesson`, `Vocabulary`, `Grammar`, `GrammarExample`, `Deck`, `Question`, `QuestionOption` — các entity này kế thừa `AuditableEntity`, có thêm các field:
 
 | Field | Kiểu | Ghi chú |
 |---|---|---|
@@ -230,4 +236,7 @@ Các entity ở mục 1–2–3 (trừ log/transaction) đều có thêm các fi
 | deletedAt | datetime, nullable | |
 | deletedBy | bigint, nullable | |
 
-**Không áp dụng** cho: `ReviewLog`, `XpLog`, `ActivityHistory`, `QuizAttemptAnswer`, `RefreshToken`, `VerificationToken` — các bảng này chỉ có `id` + timestamp đơn giản (xem D9 trong `docs/PROJECT_OVERVIEW.md`).
+**Không áp dụng** — các entity dưới đây kế thừa `BaseEntity` (chỉ có `id`), KHÔNG có 7 field audit ở trên, chia làm 2 nhóm theo lý do:
+
+- **Log/Transaction data thật** (append-only, D9 liệt kê rõ tên): `ReviewLog`, `XpLog`, `QuizAttempt`, `QuizAttemptAnswer`, `RefreshToken`, `VerificationToken`. `ActivityHistory` (Giai đoạn 8, chưa có trong code) khi triển khai cũng sẽ thuộc nhóm này.
+- **State/join thuần** (không phải log, nhưng cũng không cần soft-delete/audit vì user chỉ tự thao tác trên bản ghi của chính mình hoặc gỡ = xoá cứng): `LessonVocabulary`, `DeckCard`, `UserVocabularyProgress`, `CourseEnrollment`, `LessonProgress`, `UserDailyActivity`, `Favorite` — xem Javadoc từng entity hoặc `docs/dev/SCHEMA_CHANGE_LOG.md` để biết lý do cụ thể từng trường hợp.

@@ -351,6 +351,7 @@ erDiagram
         bigint selected_option_id FK "nullable"
         varchar typed_answer "nullable"
         boolean is_correct
+        int display_order
     }
 ```
 
@@ -374,7 +375,7 @@ erDiagram
         varchar status
         int progress_percent
         datetime enrolled_at
-        datetime completed_at
+        datetime updated_at
     }
     LESSON_PROGRESS {
         bigint id PK
@@ -434,7 +435,7 @@ erDiagram
         bigint user_id FK
         varchar target_type "COURSE|DECK|VOCABULARY"
         bigint target_id
-        datetime created_at
+        datetime favorited_at
     }
     ACTIVITY_HISTORY {
         bigint id PK
@@ -465,11 +466,15 @@ erDiagram
     }
 ```
 
+> **Trạng thái implement (2026-07-31):** `FAVORITE` (Giai đoạn 8) **đã có trong code**, xem `docs/dev/SCHEMA_CHANGE_LOG.md`. `ACTIVITY_HISTORY`/`NOTIFICATION`/`STUDY_REMINDER` **chưa có trong code** — chưa tới lượt theo roadmap (mục 12/13), `NOTIFICATION` gửi qua Email/Push thật (không phải in-app) còn thuộc Phase 2 (mục 11).
+
 ---
 
 ## 7. Backend Architecture
 
 ### 7.1 Package theo domain
+
+> Cây package dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thống (giống cách section 9 liệt kê API), không phải danh sách "đã có trong code" — package nào chưa tồn tại được đánh dấu ⏳ ngay trong comment, còn lại đã có (xem `find language-learning-backend/src/main/java/.../language_learning_backend -maxdepth 1 -type d` để đối chiếu thực tế, hoặc mục 12/13 để biết giai đoạn nào đang làm).
 
 ```
 com.languagelearning.language_learning_backend
@@ -496,11 +501,13 @@ com.languagelearning.language_learning_backend
 ├── progress/            (enrollment, lesson-progress, daily-activity)
 ├── gamification/        (streak, xp, achievement, leaderboard)
 ├── favorite/
-├── history/
-├── notification/        (notification + reminder)
-├── search/
-└── admin/               (analytics/dashboard queries, controller /api/admin/**)
+├── history/             ⏳ chưa có trong code
+├── notification/        (notification + reminder) ⏳ chưa có trong code
+├── search/              ⏳ chưa có trong code
+└── admin/               (analytics/dashboard queries, controller /api/admin/**) ⏳ chưa có trong code
 ```
+
+> Lưu ý: các `Admin*Controller` hiện tại (vd `AdminCourseController`, `AdminLessonController`, `AdminVocabularyController`...) nằm ngay trong package module tương ứng (`course/controller/`, `lesson/controller/`...), KHÔNG nằm trong 1 package `admin/` tập trung — package `admin/` riêng ở trên là thiết kế dành cho Giai đoạn 9 (Admin Dashboard/Analytics tổng hợp nhiều module, khác các CRUD admin theo từng entity đã có sẵn).
 
 Trong module nghiệp vụ (ví dụ `vocabulary/`):
 
@@ -600,10 +607,11 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | GET | `/api/lessons/{id}` | public — ✅ đã implement, **đã gating theo Enroll** (quyết định chốt khi code: preview, không chặn hẳn — xem `docs/testing/13_FRS_TC_COURSE_LESSON.md` mục 1.3): đã enroll (hoặc chưa login/chưa enroll đều coi là chưa) → `enrolled=true`, đầy đủ Vocabulary (qua `LessonVocabulary`) + Grammar (kèm example); chưa enroll → `enrolled=false`, 2 field đó rỗng, các field gốc của Lesson vẫn hiển thị |
 | POST | `/api/lessons/{id}/complete` | protected — ✅ đã implement, idempotent (hoàn thành lại không cộng thêm), 400 `COURSE_NOT_ENROLLED` nếu chưa enroll Course chứa Lesson, tự tính lại `CourseEnrollment.progressPercent`/`status`, cộng XP `LESSON_COMPLETED` (chỉ lần đầu) + ghi `UserDailyActivity.studyMinutes` (Giai đoạn 7) |
 | GET/PUT/POST/DELETE | `/api/admin/lessons/{id}` | admin — ✅ đã implement (GET/PUT/DELETE 1 Lesson theo id; tạo mới qua `/api/admin/courses/{courseId}/lessons`) |
-| POST/GET/DELETE | `/api/admin/lessons/{lessonId}/vocabularies` \| `/{vocabularyId}` | admin — ✅ đã implement, gắn/gỡ Vocabulary vào Lesson (join `LessonVocabulary`, 409 nếu gắn trùng) |
+| POST/DELETE | `/api/admin/lessons/{lessonId}/vocabularies` \| `/{vocabularyId}` | admin — ✅ đã implement, gắn/gỡ Vocabulary vào Lesson (join `LessonVocabulary`, 409 nếu gắn trùng). Không có GET riêng — xem danh sách qua `GET /api/lessons/{id}` (trả kèm Vocabulary đã gắn) |
 | POST/GET | `/api/admin/lessons/{lessonId}/grammars` | admin — ✅ đã implement, tạo Grammar mới (kèm nested examples) / liệt kê rút gọn theo Lesson |
 | GET/PUT/DELETE | `/api/admin/grammars/{id}` | admin — ✅ đã implement, update = thay toàn bộ danh sách example |
 | GET | `/api/vocabularies?languageId=&keyword=&page=` | public — ✅ đã implement, chỉ trả từ hệ thống (`ownerId` null) status=ACTIVE |
+| GET | `/api/vocabularies/{id}` | public — ✅ đã implement, 404 nếu không tồn tại/không phải hệ thống/không ACTIVE (không tiết lộ tồn tại) |
 | GET/POST/PUT/DELETE | `/api/admin/vocabularies/**` | admin — ✅ đã implement, chỉ tạo từ hệ thống (`ownerId` luôn null — custom word của User thuộc luồng Deck ở Giai đoạn 5) |
 | GET | `/api/decks?keyword=` | public — ✅ đã implement, chỉ trả visibility=PUBLIC status=ACTIVE |
 | GET | `/api/decks/mine` | protected — ✅ đã implement, toàn bộ Deck của currentUser (mọi visibility/status). Khai báo `authenticated()` TRƯỚC rule GET permitAll rộng hơn trong SecurityConfig (giống `/api/auth/logout`) |

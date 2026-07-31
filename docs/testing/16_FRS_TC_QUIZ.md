@@ -37,7 +37,7 @@
 
 ## Phần 3 — Test Cases chi tiết
 
-> **Trạng thái implement (2026-07-30):** TC-QUIZ-001 → 007, 009 → 016, 018, 020 → 023 (generate/submit/history cho `sourceType=LESSON`, type MULTIPLE_CHOICE/FILL_BLANK, ẩn đáp án đúng, chấm điểm đúng kể cả bỏ qua câu, ownership 404, out-of-scope 400) **đã test được**. TC-QUIZ-008 (Generate Quiz từ Deck) **chưa test được** — `sourceType=DECK` cố tình trả 400 vì Deck chưa tồn tại (Giai đoạn 5). TC-QUIZ-017, 019 **test được một phần** — `accuracy=100%` tính đúng nhưng `xpEarned` luôn `0` (XP thật + `XpLog` cần hạ tầng D8, hoãn đúng lịch Giai đoạn 7, xem `docs/PROJECT_OVERVIEW.md` mục 13). `questionCount` diễn giải từ `10|20|50|ALL` (FRS) sang `Integer` nullable (bỏ trống = Tất cả) phía backend — không đổi hành vi, chỉ đổi kiểu field trong request JSON.
+> **Trạng thái implement (2026-07-31, cập nhật sau khi retrofit XP ở Giai đoạn 7):** TC-QUIZ-001 → 007, 009 → 023 (generate/submit/history cho `sourceType=LESSON`, type MULTIPLE_CHOICE/FILL_BLANK, ẩn đáp án đúng, chấm điểm đúng kể cả bỏ qua câu, ownership 404, out-of-scope 400) **đã test được**. TC-QUIZ-008 (Generate Quiz từ Deck) **chưa test được** — `sourceType=DECK` cố tình trả 400 vì Deck chưa hỗ trợ generate quiz theo kiểu này (xem TC-QUIZ-008 ghi chú riêng bên dưới). TC-QUIZ-017, 019 **đã test được** — `accuracy=100%` tính đúng, `xpEarned=5` (`QuizServiceImpl.QUIZ_COMPLETED_XP`, cộng vào `User.xp` + ghi `XpLog` reason=`QUIZ_COMPLETED` đúng D8, retrofit ở Giai đoạn 7, xem `docs/dev/SCHEMA_CHANGE_LOG.md`). **Quyết định chốt khi code:** XP `QUIZ_COMPLETED` là mức cố định (flat rate) cộng mỗi lần nộp bài bất kể đúng/sai bao nhiêu câu (kể cả 0/10 đúng, kể cả làm lại) — khác với `accuracy`/`score` vốn phản ánh đúng/sai; xem TC-QUIZ-016 đã cập nhật lại theo đúng hành vi này. `questionCount` diễn giải từ `10|20|50|ALL` (FRS) sang `Integer` nullable (bỏ trống = Tất cả) phía backend — không đổi hành vi, chỉ đổi kiểu field trong request JSON.
 
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
@@ -56,8 +56,8 @@
 | TC-QUIZ-013 | Làm bài Fill in the Blank — sai | | `typedAnswer="are"` | | Chấm sai | High |
 | TC-QUIZ-014 | Bỏ qua 1 câu không trả lời | Quiz có 10 câu, chỉ trả lời 9 câu | Nộp bài | | Câu bị bỏ qua tính là sai, `wrongAnswers` tăng tương ứng, `totalQuestions=10` vẫn giữ nguyên | High |
 | TC-QUIZ-015 | Nộp bài — tính điểm tổng hợp chính xác | Quiz 10 câu, đúng 7 | Nộp bài | | `correctAnswers=7`, `wrongAnswers=3`, `accuracy=70%`, `score` tương ứng | Critical |
-| TC-QUIZ-016 | Nộp bài toàn bộ sai | 10 câu, đúng 0 | Nộp bài | | `xpEarned=0` (theo rule mục 5), `accuracy=0%` | High |
-| TC-QUIZ-017 | Nộp bài toàn bộ đúng | 10 câu, đúng 10 | Nộp bài | | `accuracy=100%`, `xpEarned` > 0, cộng XP vào User + XpLog reason=QUIZ_COMPLETED | Critical |
+| TC-QUIZ-016 | Nộp bài toàn bộ sai | 10 câu, đúng 0 | Nộp bài | | `accuracy=0%`, `xpEarned=5` (XP `QUIZ_COMPLETED` là mức cố định mỗi lần nộp bài, không phụ thuộc số câu đúng — quyết định chốt khi code, xem ghi chú Trạng thái implement) | High |
+| TC-QUIZ-017 | Nộp bài toàn bộ đúng | 10 câu, đúng 10 | Nộp bài | | `accuracy=100%`, `xpEarned=5`, cộng XP vào User + XpLog reason=QUIZ_COMPLETED | Critical |
 | TC-QUIZ-018 | Xem chi tiết QuizAttempt sau khi nộp | Sau TC-QUIZ-015 | `GET /api/quizzes/attempts/{id}` | | Hiển thị đúng từng câu: câu trả lời đã chọn, đáp án đúng, giải thích (explanation) | High |
 | TC-QUIZ-019 | Quiz History chỉ hiện của chính mình | user01 và user02 đều đã làm quiz | user02 gọi `GET /api/quizzes/attempts` | | Chỉ thấy QuizAttempt của user02, không lẫn của user01 | Critical |
 | TC-QUIZ-020 | Xem chi tiết QuizAttempt của người khác | user02 biết id attempt của user01 | `GET /api/quizzes/attempts/{user01AttemptId}` bằng token user02 | | 403/404 | Critical |

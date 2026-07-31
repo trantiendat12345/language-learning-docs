@@ -83,6 +83,8 @@
 
 ## Phần 3 — Test Cases chi tiết
 
+> **Trạng thái implement (2026-07-31):** Toàn bộ 7 endpoint Auth (`register`, `login`, `refresh-token`, `logout`, `forgot-password`, `reset-password`, `verify-email`) **đã implement** từ Giai đoạn 2 và **đã test được** — bao gồm rule trạng thái tài khoản (PENDING_VERIFICATION/DISABLED/LOCKED đều trả 401), password strength, revoke toàn bộ RefreshToken sau reset-password, ownership check khi logout (không revoke token của user khác, âm thầm bỏ qua). **Không áp dụng/chưa implement**: Rate-limit/chống brute-force đăng nhập (mục Phần 2 điểm 10) — chưa có cơ chế giới hạn số lần thử sai (không tìm thấy rate-limiter nào trong `auth/` package), ghi nhận là gap thật, chưa có kế hoạch cụ thể ở roadmap hiện tại.
+
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-AUTH-001 | Đăng ký thành công | Chưa có tài khoản trùng | 1. Gọi `POST /api/auth/register` với dữ liệu hợp lệ | username=`newuser01`, email hợp lệ chưa tồn tại, password=`Passw0rd1`, confirm khớp | 200, `code=200`, User được tạo với status PENDING_VERIFICATION (đã chốt), không có password trong response | Critical |

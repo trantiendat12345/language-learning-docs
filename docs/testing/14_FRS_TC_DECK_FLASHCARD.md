@@ -58,7 +58,7 @@
 | TC-DECK-006 | Xoá Deck của người khác | user02 cố xoá deck user01 | `DELETE /api/decks/{user01DeckId}` bằng token user02 | | 403 Forbidden | Critical |
 | TC-DECK-007 | Xoá Deck không tồn tại | | `DELETE /api/decks/999999` | | 404 | Low |
 | TC-DECK-008 | Thêm từ vựng có sẵn vào Deck | Deck của user01 tồn tại, từ "family" có sẵn | `POST /api/decks/{id}/cards` | vocabularyId=id của "family" | 200, DeckCard tạo mới | High |
-| TC-DECK-009 | Thêm trùng 1 từ vào cùng Deck | Sau TC-DECK-008 | Thêm lại đúng vocabularyId đó | | 400, "từ đã có trong deck" hoặc bị bỏ qua idempotent — không tạo bản ghi trùng | High |
+| TC-DECK-009 | Thêm trùng 1 từ vào cùng Deck | Sau TC-DECK-008 | Thêm lại đúng vocabularyId đó | | **409** (`DuplicateResourceException`, không tạo bản ghi trùng — quyết định chốt khi code: 409 Conflict thay vì 400, xem `docs/dev/ERROR_CODE_CATALOG.md`) | High |
 | TC-DECK-010 | Thêm từ mới (custom) vào Deck | Đã login user01 | Nhập từ chưa tồn tại trong hệ thống + nghĩa | word="testword123" | 200, tạo `Vocabulary(ownerId=user01)` mới + `DeckCard` liên kết | High |
 | TC-DECK-011 | Xoá từ khỏi Deck | DeckCard tồn tại | `DELETE /api/decks/{id}/cards/{cardId}` | | 200, DeckCard bị xoá, Vocabulary gốc **không** bị xoá (vẫn dùng ở nơi khác) | High |
 | TC-DECK-012 | User khác thêm/xoá từ trong Deck không phải của mình | user02 thao tác lên deck user01 | `POST/DELETE .../cards` | | 403 Forbidden | Critical |

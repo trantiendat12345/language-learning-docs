@@ -75,12 +75,12 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 | `QUIZ_ANSWER_OUT_OF_SCOPE` | 400 | TC-QUIZ-023 — `POST /api/quizzes/attempts` có `questionId` không thuộc đúng `sourceType`/`sourceId` đã khai báo (chặn gian lận) |
 | *(không phải errorCode)* Nguồn không đủ câu theo `questionCount` | 200 | TC-QUIZ-003 — KHÔNG dùng errorCode/exception (vẫn là thành công), trả `QuizGenerateResponse{requestedCount, actualCount}` để FE tự so sánh và hiển thị cảnh báo |
 
-### Deck / Review (ví dụ mở rộng khi code tới module đó)
+### Deck (Giai đoạn 5 — đã implement, không dùng errorCode riêng)
 
 | `errorCode` | HTTP `code` | Test Case liên quan |
 |---|---|---|
-| `DECK_CARD_ALREADY_EXISTS` | 400/409 | TC-DECK-009 |
-| `DECK_CLONE_SOURCE_NOT_PUBLIC` | 403/404 | TC-DECK-019 |
+| `DUPLICATE_RESOURCE` (dùng chung, không tạo `DECK_CARD_ALREADY_EXISTS` riêng) | 409 | TC-DECK-009 — thêm trùng 1 từ vào cùng Deck, `DeckServiceImpl.addCard` ném `DuplicateResourceException` với message riêng, giữ nguyên errorCode chung |
+| `RESOURCE_NOT_FOUND` (dùng chung, không tạo `DECK_CLONE_SOURCE_NOT_PUBLIC` riêng) | 404 | TC-DECK-019 — clone Deck Private của người khác, `DeckServiceImpl.cloneDeck` ném `ResourceNotFoundException` (cùng quy tắc "không tiết lộ tồn tại" như GET) |
 
 > **Quy tắc bổ sung dòng mới:** khi implement 1 module và cần 1 error code chưa có trong bảng, thêm ngay vào đây trong cùng commit — không để `errorCode` "trôi nổi" chỉ tồn tại trong code.
 

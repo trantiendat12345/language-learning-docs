@@ -46,6 +46,8 @@
 
 ## Phần 3 — Test Cases chi tiết
 
+> **Trạng thái implement (2026-07-31):** Mục 1.1 (Xem profile), 1.2 (Sửa profile — trừ `nativeLanguageId`/`learningLanguageId`, xem TC-PROFILE-005/006), 1.3 (Đổi mật khẩu), 1.4 (Daily Goal, Giai đoạn 7) **đã implement và test được** — chi tiết theo từng TC ở bảng dưới. Mục 1.5 (Settings chung — Theme, Notification preference) **chưa có trong code** (không có endpoint nào cho phần này) — chưa có TC nào trong bảng dưới đặc tả riêng cho mục 1.5, không tính là gap của bảng TC nhưng là phần FRS chưa triển khai.
+
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-PROFILE-001 | Xem profile thành công | Đã login user01 | `GET /api/users/me` | | 200, đúng dữ liệu user01, không có `passwordHash` | Critical |
