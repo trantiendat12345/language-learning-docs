@@ -218,7 +218,7 @@
 | Entity | Field đáng chú ý | Ràng buộc |
 |---|---|---|
 | Favorite | `userId`, `targetType` (`COURSE`/`DECK`/`VOCABULARY`), `targetId`, `favoritedAt` | Unique `(userId, targetType, targetId)` — ✅ **đã có trong code** (Giai đoạn 8) |
-| ActivityHistory | `userId`, `targetType`, `targetId`, `action` (`VIEWED`/`LEARNED`/`REVIEWED`), `occurredAt` | Append-only, có thể giới hạn số bản ghi hiển thị gần nhất (vd 50) — ⏳ **Chưa có trong code** |
+| ActivityHistory | `userId`, `targetType` (`COURSE`/`LESSON`/`DECK`/`VOCABULARY`), `targetId`, `action` (`VIEWED`/`LEARNED`/`REVIEWED`), `occurredAt` | Append-only (không unique), giới hạn số bản ghi qua `GET /api/history/recent?limit=` (mặc định 50) — ✅ **đã có trong code** (Giai đoạn 8), chỉ ghi cho 3 luồng: xem Course Detail (VIEWED), hoàn thành Lesson lần đầu (LEARNED), review từ vựng (REVIEWED) |
 | Notification | `userId` (nullable = broadcast toàn hệ thống), `type`, `title`, `message`, `linkUrl`, `isRead` | ⏳ **Chưa có trong code** |
 | StudyReminder | `userId`, `type` (`STUDY`/`FLASHCARD`/`REVIEW`), `reminderTime`, `daysOfWeek`, `channel` (`IN_APP`/`EMAIL`/`PUSH`), `isActive` | MVP chỉ hiện thực `IN_APP` — ⏳ **Chưa có trong code** |
 

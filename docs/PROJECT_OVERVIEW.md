@@ -466,7 +466,7 @@ erDiagram
     }
 ```
 
-> **Trạng thái implement (2026-07-31):** `FAVORITE` (Giai đoạn 8) **đã có trong code**, xem `docs/dev/SCHEMA_CHANGE_LOG.md`. `ACTIVITY_HISTORY`/`NOTIFICATION`/`STUDY_REMINDER` **chưa có trong code** — chưa tới lượt theo roadmap (mục 12/13), `NOTIFICATION` gửi qua Email/Push thật (không phải in-app) còn thuộc Phase 2 (mục 11).
+> **Trạng thái implement (2026-07-31):** `FAVORITE`, `ACTIVITY_HISTORY` (Giai đoạn 8) **đã có trong code**, xem `docs/dev/SCHEMA_CHANGE_LOG.md`. `ACTIVITY_HISTORY` chỉ ghi log cho 3 luồng có Test Case cụ thể (xem `action` VIEWED/LEARNED/REVIEWED trong `docs/testing/18_FRS_TC_FAVORITE_HISTORY.md`) — chưa ghi VIEWED khi xem Lesson/Deck/Vocabulary detail, cố tình để dành. `NOTIFICATION`/`STUDY_REMINDER` **chưa có trong code** — chưa tới lượt theo roadmap (mục 12/13), `NOTIFICATION` gửi qua Email/Push thật (không phải in-app) còn thuộc Phase 2 (mục 11).
 
 ---
 
@@ -501,7 +501,7 @@ com.languagelearning.language_learning_backend
 ├── progress/            (enrollment, lesson-progress, daily-activity)
 ├── gamification/        (streak, xp, achievement, leaderboard)
 ├── favorite/
-├── history/             ⏳ chưa có trong code
+├── history/
 ├── notification/        (notification + reminder) ⏳ chưa có trong code
 ├── search/              ⏳ chưa có trong code
 └── admin/               (analytics/dashboard queries, controller /api/admin/**) ⏳ chưa có trong code
@@ -631,7 +631,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | GET | `/api/progress/dashboard` | protected — ✅ đã implement (Giai đoạn 7): Daily Goal progress (`todayStudyMinutes`/`todayWordsLearned`/`goalMet`), Streak (`currentStreak`/`longestStreak`), `totalXp`, `wordsToReviewCount` (khớp chính xác `GET /api/review/today`), `recentQuizAccuracy` (nullable), `continueLearning` (nullable — khoá học IN_PROGRESS cập nhật gần nhất + Lesson PUBLISHED chưa hoàn thành đầu tiên). Không có recent activity (module History chưa xây, Giai đoạn 8) hay recommended courses (chưa có thuật toán gợi ý) |
 | GET | `/api/leaderboard?period=WEEKLY` | protected — Phase 2, xem mục 11 |
 | GET/POST/DELETE | `/api/favorites/**` | protected — ✅ đã implement (Giai đoạn 8): `GET` danh sách của chính currentUser (mới nhất trước, ẩn item mà đối tượng gốc đã xoá mềm/không còn tồn tại); `POST` idempotent (favorite trùng trả về bản ghi đã có, không tạo trùng); Deck PRIVATE không phải của currentUser → 404 (không tiết lộ tồn tại, cùng quy tắc `DeckServiceImpl.getDeckById`); `DELETE /{id}` ownership check (403 `OWNERSHIP_VIOLATION` nếu không phải chủ sở hữu) |
-| GET | `/api/history/recent` | protected |
+| GET | `/api/history/recent?action=&limit=` | protected — ✅ đã implement (Giai đoạn 8), mới nhất trước, lọc theo `action` (VIEWED/LEARNED/REVIEWED) và giới hạn `limit` (mặc định 50) tuỳ chọn. Ghi log tự động khi xem Course Detail (`GET /api/courses/{id}`, chỉ khi đã đăng nhập), hoàn thành Lesson lần đầu, mọi lần review từ vựng. Dòng mà đối tượng gốc đã xoá mềm/không còn tồn tại vẫn hiển thị (`title=null`, không ẩn hẳn — khác Favorite) |
 | GET/PUT | `/api/notifications/**` | protected |
 | GET | `/api/search?q=&type=` | public |
 | GET | `/api/admin/dashboard` | admin |
@@ -671,7 +671,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | 5. Deck | Deck, DeckCard, Public/Private, Clone, Flashcard learning modes | ✅ Hoàn thành — Deck CRUD + DeckCard (add existing/custom word, remove) + Public search + Clone; Flashcard learning modes (Normal/Reverse/Shuffle) là FE render `GET /api/decks/{id}/cards` theo nhiều kiểu, không cần API riêng; đánh giá Forgot/Hard/Good/Easy dùng chung `POST /api/review/{vocabularyId}` (Giai đoạn 6) |
 | 6. Spaced Repetition | UserVocabularyProgress, ReviewLog, SM-2, Review Today | ✅ Hoàn thành phạm vi MVP — XP (`REVIEW_DONE`) và `UserDailyActivity` hoãn sang Giai đoạn 7 (cần `XpLog`/D8), cùng lịch với Lesson complete/Quiz |
 | 7. Progress & Gamification | CourseEnrollment, LessonProgress, UserDailyActivity, XpLog, Progress Dashboard, Achievement, Leaderboard | ✅ Hoàn thành phạm vi MVP — `User` bổ sung `dailyGoalType`/`dailyGoalValue`/`lastActiveDate` (đặc tả gốc Giai đoạn 2, phát hiện thiếu khi làm chunk này); `XpLog`+`XpService` (D8 dual-write), `StreakService` (không tạo bảng `UserStreak` riêng — denormalized trên `User`), `UserDailyActivity`+`DailyActivityService` (goalMet + trigger Streak + bonus XP `DAILY_GOAL_MET`), `GET /api/progress/dashboard`; retrofit XP+DailyActivity vào Lesson complete/Quiz submit/Review submit (3 module đã xây trước đó). Đã verify qua curl thật + đối chiếu DB: `User.xp == SUM(XpLog.amount)` khớp 100%. `Achievement`/`Leaderboard` **cố tình hoãn** — thuộc Phase 2 theo mục 11, không phải MVP |
-| 8. Engagement | Favorite, ActivityHistory, Notification, StudyReminder, Search | 🔄 Đang thực hiện — Favorite xong, xem mục 13 |
+| 8. Engagement | Favorite, ActivityHistory, Notification, StudyReminder, Search | 🔄 Đang thực hiện — Favorite + ActivityHistory xong, xem mục 13 |
 | 9. Admin & Analytics | Admin Dashboard, thống kê User/Course/Learning | ⏳ Chưa bắt đầu |
 | 10. Production | Testing, Flyway/Liquibase, Performance, Security hardening, Docker, Logging, Monitoring | ⏳ Chưa bắt đầu |
 
@@ -817,6 +817,8 @@ Tiếp theo — luồng `Enroll` + `Complete Lesson` (`CourseEnrollment`, `Lesso
 
 - **`Favorite`: ✅ Hoàn thành (2026-07-31).** Entity `Favorite` (kế thừa `BaseEntity`, unique `(userId, targetType, targetId)`), `FavoriteTargetType` enum (COURSE/DECK/VOCABULARY). `FavoriteService`/`Impl`: `POST /api/favorites` idempotent (trùng trả về bản ghi cũ, không tạo trùng — quyết định chốt khi code, FRS để mở giữa 200/400 ở TC-FAV-002); Deck PRIVATE không phải của currentUser → 404 (tái dùng đúng quy tắc "không tiết lộ tồn tại" của `DeckServiceImpl.getDeckById`, tự implement lại `isVisibleTo` trong `FavoriteServiceImpl` vì method gốc `private`, tránh phụ thuộc vòng giữa 2 service); `GET /api/favorites` resolve `title`/`imageUrl` trực tiếp từ Course/Deck/Vocabulary tại thời điểm gọi (không denormalize, D1), ẩn item mà đối tượng gốc đã xoá mềm/không còn tồn tại (không crash); `DELETE /api/favorites/{id}` ownership check (`OwnershipViolationException`, đã có sẵn Javadoc dự trù cho Favorite từ chunk Deck). 12 Unit Test mới (`FavoriteServiceImplTest` — 220 test toàn backend). Đã test thật qua curl + kiểm DB: favorite Course/Vocabulary/Deck Public thành công, favorite trùng idempotent (cùng id), favorite Deck Private của người khác → 404, xoá của người khác → 403 `OWNERSHIP_VIOLATION`, soft-delete Course đang được favorite → biến mất khỏi `GET /api/favorites` không lỗi, phần còn lại vẫn hiển thị đúng.
 
-Còn lại theo roadmap: `ActivityHistory`, `Notification`/`StudyReminder` (in-app only — Email/Push thật là Phase 2, mục 8.7 trong `02_FEATURE_LIST.md`), `Search`; sau đó Giai đoạn 9 (Admin & Analytics), Giai đoạn 10 (Production), cộng với `Tag`/`VocabularyTag`/`VocabularyRelation` + `Achievement`/`Leaderboard` (Phase 2, hoãn từ Giai đoạn 3/7).
+- **`ActivityHistory`: ✅ Hoàn thành (2026-07-31).** Entity `ActivityHistory` (kế thừa `BaseEntity` — Log/Transaction data D9, không unique constraint vì append-only thật), `ActivityTargetType` enum (COURSE/LESSON/DECK/VOCABULARY — có thêm LESSON so với `FavoriteTargetType`), `ActivityAction` enum (VIEWED/LEARNED/REVIEWED). `ActivityHistoryService`/`Impl`: `recordActivity` không idempotent (mỗi lần gọi tạo 1 dòng mới, khác Favorite); `getMyHistory` hỗ trợ lọc `action` + giới hạn `limit`, resolve `title` từ Course/Lesson/Deck/Vocabulary tại thời điểm gọi, KHÔNG ẩn dòng khi đối tượng gốc đã xoá mềm (chỉ `title=null`) — khác hẳn Favorite, vì đây là log "đã xảy ra" chứ không phải danh sách "hiện có thể xem". Retrofit 3 trigger đúng theo Test Case: `CourseServiceImpl.getPublishedCourseById` (thêm `currentUserId` nullable, method đổi từ `readOnly=true` sang write vì có side-effect ghi log, chỉ ghi khi đã đăng nhập) → VIEWED; `LessonProgressServiceImpl.completeLesson` (chỉ lần hoàn thành đầu) → LEARNED; `ReviewServiceImpl.submitReview` (mọi lần) → REVIEWED. **Cố tình chưa làm** (không có TC): VIEWED cho Lesson/Deck/Vocabulary detail, LEARNED cho Deck. 5 Unit Test mới (`ActivityHistoryServiceImplTest`) + cập nhật `CourseServiceImplTest`/`LessonProgressServiceImplTest`/`ReviewServiceImplTest` (226 test toàn backend). Đã test thật qua curl + kiểm DB: xem Course → VIEWED, complete Lesson → LEARNED (gọi lại không ghi thêm, đúng idempotent theo XP), review từ → REVIEWED, lọc theo `action`/`limit` đúng, xem ẩn danh (chưa đăng nhập) không lỗi và không ghi log.
 
-Bước tiếp theo: `ActivityHistory` (`GET /api/history/recent`, ghi log tự động khi xem Course/hoàn thành Lesson/ôn tập — cần retrofit vào `CourseServiceImpl.getCourseById`/`LessonProgressServiceImpl.completeLesson`/`ReviewServiceImpl.submitReview` giống cách XP được retrofit ở Giai đoạn 7), rồi tới `Notification`/`StudyReminder`/`Search`.
+Còn lại theo roadmap: `Notification`/`StudyReminder` (in-app only — Email/Push thật là Phase 2, mục 8.7 trong `02_FEATURE_LIST.md`), `Search`; sau đó Giai đoạn 9 (Admin & Analytics), Giai đoạn 10 (Production), cộng với `Tag`/`VocabularyTag`/`VocabularyRelation` + `Achievement`/`Leaderboard` (Phase 2, hoãn từ Giai đoạn 3/7).
+
+Bước tiếp theo: `Notification`/`StudyReminder` (in-app only), rồi `Search`.
