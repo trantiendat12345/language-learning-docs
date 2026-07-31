@@ -41,6 +41,8 @@ Xem đầy đủ quy tắc tại `04_BUSINESS_RULES_GLOBAL.md` mục 1. `User.xp
 
 ## Phần 3 — Test Cases chi tiết
 
+> **Trạng thái implement (2026-07-30):** `GET /api/progress/dashboard` (mục 1.1, trừ "lời chào" — trivial FE concern — và "hoạt động gần đây"/"Course gợi ý" — module History chưa xây ở Giai đoạn 8, chưa có thuật toán gợi ý), Daily Goal & Streak (mục 1.2), XP (mục 1.3, bất biến `User.xp == SUM(XpLog.amount)` đã verify qua curl+DB) **đã test được**. TC-PROG-001 → 004, 006 → 009 (Dashboard, Words To Review khớp Review Today, Empty State user mới, Daily Goal đạt/reset, XP) **đã test được**. TC-PROG-005 (không cộng XP `DAILY_GOAL_MET` lần 2 trong ngày) đã đúng theo code (check `goalMet` chuyển false→true mới cộng) nhưng chưa test riêng qua curl (đã gián tiếp verify: gọi `recordActivity` nhiều lần trong 1 ngày chỉ gọi `StreakService` 1 lần ở Unit Test `DailyActivityServiceImplTest`). Achievement (mục 1.4) và Leaderboard (mục 1.5) **chưa có trong code** — Phase 2, xem `docs/PROJECT_OVERVIEW.md` mục 11 (quyết định hoãn khi rà lại mục 11 trước khi bắt đầu chunk Giai đoạn 7, cùng cách xử lý với `Tag`/`VocabularyTag`/`VocabularyRelation` ở Giai đoạn 3). `Continue Learning` trong Dashboard chỉ xét khoá học `IN_PROGRESS` cập nhật gần nhất — chưa có nhiều khoá học song song để test tie-break thứ tự.
+
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-PROG-001 | Dashboard hiển thị đúng sau login | user01 có dữ liệu mẫu (xem `09_TEST_DATA.md` mục 9) | `GET /api/progress/dashboard` | | Trả đủ: Daily Goal progress, Streak, Words To Review, Quiz Accuracy gần nhất, Continue Learning | Critical |

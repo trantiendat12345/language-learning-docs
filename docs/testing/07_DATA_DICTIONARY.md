@@ -26,6 +26,9 @@
 | longestStreak | int | — | Default 0, ≥ 0 | |
 | coin | int | — | Default 0, ≥ 0 | |
 | timezone | varchar(50) | ✅ | Default theo hệ thống nếu không chọn | vd `Asia/Ho_Chi_Minh` |
+| lastActiveDate | date | ❌ | Nullable — null nếu chưa từng có hoạt động | Dùng tính `currentStreak`/`longestStreak` (Giai đoạn 7, xem `StreakService`) |
+| dailyGoalType | enum | ✅ | `TIME`/`WORDS`, default `WORDS` | Giai đoạn 7 — đặc tả gốc thuộc Giai đoạn 2 (mục 1.4) nhưng phát hiện chưa được code khi làm Progress Dashboard, bổ sung ngay |
+| dailyGoalValue | int | ✅ | Default 10, ≥ 1 | Đơn vị theo `dailyGoalType` (phút nếu TIME, số từ nếu WORDS) |
 | status | enum | ✅ | `PENDING_VERIFICATION`/`ACTIVE`/`DISABLED`/`LOCKED` | |
 
 ### Role / Permission
@@ -197,11 +200,12 @@
 |---|---|---|
 | CourseEnrollment | `userId`, `courseId`, `status`, `progressPercent` (0–100) | Unique `(userId, courseId)` |
 | LessonProgress | `userId`, `lessonId`, `status` (`NOT_STARTED`/`IN_PROGRESS`/`COMPLETED`) | Unique `(userId, lessonId)` |
-| UserDailyActivity | `userId`, `activityDate` (date, theo timezone user), `studyMinutes`, `wordsLearned`, `xpEarned`, `goalMet` | Unique `(userId, activityDate)` |
-| UserStreak | `userId` (PK=FK), `currentStreak`, `longestStreak`, `lastActiveDate` | 1-1 với User |
-| XpLog | `userId`, `amount` (có thể âm nếu về sau có trừ XP — MVP chỉ cộng), `reason`, `sourceId`, `earnedAt` | Append-only |
-| Achievement | `code` (unique), `conditionType`, `conditionValue`, `xpReward`, `coinReward` | |
-| UserAchievement | `userId`, `achievementId`, `unlockedAt` | Unique `(userId, achievementId)` |
+| UserDailyActivity | `userId`, `activityDate` (date, theo timezone user), `studyMinutes`, `wordsLearned`, `xpEarned` (chỉ cộng dồn phần XP thưởng `DAILY_GOAL_MET`, không phải tổng mọi XP kiếm được trong ngày), `goalMet` | Unique `(userId, activityDate)` |
+| XpLog | `userId`, `amount` (có thể âm nếu về sau có trừ XP — MVP chỉ cộng), `reason` (`VOCAB_LEARNED`/`LESSON_COMPLETED`/`QUIZ_COMPLETED`/`REVIEW_DONE`/`DAILY_GOAL_MET`/`ACHIEVEMENT`), `sourceId`, `earnedAt` | Append-only |
+| Achievement | `code` (unique), `conditionType`, `conditionValue`, `xpReward`, `coinReward` | ⏳ **Chưa có trong code** — Phase 2, xem `docs/PROJECT_OVERVIEW.md` mục 11 |
+| UserAchievement | `userId`, `achievementId`, `unlockedAt` | Unique `(userId, achievementId)` — ⏳ **Chưa có trong code** — Phase 2 |
+
+**Không có bảng `UserStreak` riêng** — `currentStreak`/`longestStreak`/`lastActiveDate` giữ nguyên denormalized trên `User` (mục 1) thay vì tách bảng 1-1, tránh 2 nguồn sự thật cho cùng giá trị (quyết định chốt khi code Giai đoạn 7, xem Javadoc `User.java` + `docs/dev/SCHEMA_CHANGE_LOG.md`).
 
 ## 6. Engagement
 

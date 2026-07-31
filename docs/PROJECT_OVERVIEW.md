@@ -110,6 +110,9 @@ erDiagram
         int longest_streak
         int coin
         varchar timezone
+        date last_active_date
+        varchar daily_goal_type
+        int daily_goal_value
         varchar status
     }
     ROLE {
@@ -140,6 +143,8 @@ erDiagram
 ```
 
 > **Lưu ý:** `native_language_id`/`learning_language_id` và quan hệ tới `LANGUAGE` ở trên là thiết kế cho **Giai đoạn 3** (khi entity `Language` tồn tại) — **chưa có trong code hiện tại**. `User.java` hiện chưa có 2 cột này (xem comment trong entity + `docs/dev/SCHEMA_CHANGE_LOG.md`).
+>
+> `last_active_date`/`daily_goal_type`/`daily_goal_value` được bổ sung ở **Giai đoạn 7** (`daily_goal_*` theo đặc tả gốc thuộc Giai đoạn 2 mục "Learning Settings" nhưng chưa từng được code, chỉ phát hiện khi làm Progress Dashboard cần dùng). `current_streak`/`longest_streak` giữ nguyên denormalized trên `USER` — **không có bảng `USER_STREAK` riêng** dù mục 6.5 phía dưới có thể gợi ý vậy, tránh 2 nguồn sự thật cho cùng giá trị.
 
 ### 6.2 Content: Language → Course → Lesson → Vocabulary/Grammar
 
@@ -358,7 +363,6 @@ erDiagram
     USER ||--o{ LESSON_PROGRESS : tracks
     LESSON_PROGRESS }o--|| LESSON : "for"
     USER ||--o{ USER_DAILY_ACTIVITY : logs
-    USER ||--|| USER_STREAK : has
     USER ||--o{ XP_LOG : earns
     USER ||--o{ USER_ACHIEVEMENT : unlocks
     ACHIEVEMENT ||--o{ USER_ACHIEVEMENT : "unlocked by"
@@ -388,12 +392,6 @@ erDiagram
         int xp_earned
         boolean goal_met
     }
-    USER_STREAK {
-        bigint user_id PK, FK
-        int current_streak
-        int longest_streak
-        date last_active_date
-    }
     XP_LOG {
         bigint id PK
         bigint user_id FK
@@ -419,6 +417,8 @@ erDiagram
         datetime unlocked_at
     }
 ```
+
+> **Trạng thái implement (2026-07-30):** `COURSE_ENROLLMENT`/`LESSON_PROGRESS` (Giai đoạn 3), `USER_DAILY_ACTIVITY`/`XP_LOG` (Giai đoạn 7 — dual-write `User.xp`+`XpLog` theo D8, `goalMet`/Streak tính qua `DailyActivityService`/`StreakService`) **đã có trong code**, xem `docs/dev/SCHEMA_CHANGE_LOG.md`. `ACHIEVEMENT`/`USER_ACHIEVEMENT` **chưa có trong code** — Phase 2 (mục 11), `XpLog.reason=ACHIEVEMENT` đã có sẵn trong enum để không phải đổi schema khi làm Phase 2 nhưng chưa được dùng.
 
 ### 6.6 Engagement (Favorite / History / Notification / Reminder)
 
@@ -588,7 +588,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | POST | `/api/auth/forgot-password` | public — ✅ đã implement, message chung chung dù email tồn tại hay không |
 | POST | `/api/auth/reset-password` | public — ✅ đã implement, revoke toàn bộ RefreshToken cũ của user sau khi đổi thành công |
 | GET | `/api/auth/verify-email` | public — ✅ đã implement |
-| GET/PUT | `/api/users/me` | protected — ✅ đã implement, PUT chỉ sửa `displayName/avatarUrl/birthday/gender/country/currentLevel` (chưa có `nativeLanguageId`/`learningLanguageId` — Giai đoạn 3) |
+| GET/PUT | `/api/users/me` | protected — ✅ đã implement, PUT sửa `displayName/avatarUrl/birthday/gender/country/currentLevel/dailyGoalType/dailyGoalValue` (chưa có `nativeLanguageId`/`learningLanguageId` — Giai đoạn 3) |
 | PUT | `/api/users/me/password` | protected — ✅ đã implement, revoke toàn bộ RefreshToken cũ sau khi đổi thành công, từ chối nếu newPassword trùng currentPassword |
 | GET | `/api/languages` | public — ✅ đã implement, chỉ trả status=ACTIVE |
 | GET/POST/PUT/DELETE | `/api/admin/languages/**` | admin — ✅ đã implement (list không phân trang — số lượng Language nhỏ), thấy cả INACTIVE |
@@ -598,7 +598,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | GET/POST/PUT/DELETE | `/api/admin/courses/**` | admin — ✅ đã implement (gồm cả `GET/POST /api/admin/courses/{id}/lessons`) |
 | GET | `/api/courses/{courseId}/lessons` | public — ✅ đã implement, chỉ trả Lesson PUBLISHED |
 | GET | `/api/lessons/{id}` | public — ✅ đã implement, **đã gating theo Enroll** (quyết định chốt khi code: preview, không chặn hẳn — xem `docs/testing/13_FRS_TC_COURSE_LESSON.md` mục 1.3): đã enroll (hoặc chưa login/chưa enroll đều coi là chưa) → `enrolled=true`, đầy đủ Vocabulary (qua `LessonVocabulary`) + Grammar (kèm example); chưa enroll → `enrolled=false`, 2 field đó rỗng, các field gốc của Lesson vẫn hiển thị |
-| POST | `/api/lessons/{id}/complete` | protected — ✅ đã implement, idempotent (hoàn thành lại không cộng thêm), 400 `COURSE_NOT_ENROLLED` nếu chưa enroll Course chứa Lesson, tự tính lại `CourseEnrollment.progressPercent`/`status` |
+| POST | `/api/lessons/{id}/complete` | protected — ✅ đã implement, idempotent (hoàn thành lại không cộng thêm), 400 `COURSE_NOT_ENROLLED` nếu chưa enroll Course chứa Lesson, tự tính lại `CourseEnrollment.progressPercent`/`status`, cộng XP `LESSON_COMPLETED` (chỉ lần đầu) + ghi `UserDailyActivity.studyMinutes` (Giai đoạn 7) |
 | GET/PUT/POST/DELETE | `/api/admin/lessons/{id}` | admin — ✅ đã implement (GET/PUT/DELETE 1 Lesson theo id; tạo mới qua `/api/admin/courses/{courseId}/lessons`) |
 | POST/GET/DELETE | `/api/admin/lessons/{lessonId}/vocabularies` \| `/{vocabularyId}` | admin — ✅ đã implement, gắn/gỡ Vocabulary vào Lesson (join `LessonVocabulary`, 409 nếu gắn trùng) |
 | POST/GET | `/api/admin/lessons/{lessonId}/grammars` | admin — ✅ đã implement, tạo Grammar mới (kèm nested examples) / liệt kê rút gọn theo Lesson |
@@ -614,14 +614,14 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | DELETE | `/api/decks/{id}/cards/{cardId}` | protected, ownership — ✅ đã implement, chỉ xoá DeckCard, Vocabulary gốc không bị ảnh hưởng |
 | POST | `/api/decks/{id}/clone` | protected — ✅ đã implement, nguồn phải PUBLIC+ACTIVE hoặc do currentUser sở hữu (404 nếu không), bản clone luôn `visibility=PRIVATE`, tham chiếu cùng Vocabulary (không copy dữ liệu, D1/D3) |
 | GET | `/api/review/today` | protected — ✅ đã implement, `UserVocabularyProgress.nextReviewDate <= hôm nay` (theo timezone currentUser), sort quá hạn lâu nhất trước |
-| POST | `/api/review/{vocabularyId}` | protected — ✅ đã implement, rating FORGOT/HARD/GOOD/EASY (SM-2 rút gọn), tạo mới `UserVocabularyProgress` nếu chưa có, luôn ghi 1 dòng `ReviewLog` |
+| POST | `/api/review/{vocabularyId}` | protected — ✅ đã implement, rating FORGOT/HARD/GOOD/EASY (SM-2 rút gọn), tạo mới `UserVocabularyProgress` nếu chưa có, luôn ghi 1 dòng `ReviewLog`, cộng XP `REVIEW_DONE` (luôn) + `VOCAB_LEARNED` (chỉ lần review đầu của từ đó) + `UserDailyActivity.wordsLearned` (Giai đoạn 7) |
 | GET/POST/PUT/DELETE | `/api/admin/questions/**` | admin — ✅ đã implement, không có endpoint public riêng (Question chỉ lộ ra qua Quiz generate, đã ẩn đáp án đúng) |
 | POST | `/api/quizzes/generate` | protected — ✅ đã implement, body: `{sourceType, sourceId, questionCount}` (`questionCount` bỏ trống = Tất cả). Chunk hiện tại chỉ hỗ trợ `sourceType=LESSON` (400 nếu COURSE/DECK/VOCAB_LIST). `Deck` nay đã tồn tại (Giai đoạn 5) nhưng generate từ DECK cần logic khác (liên kết qua Vocabulary trong Deck, không match trực tiếp `sourceId`, xem TC-QUIZ-008) — chưa bổ sung trong chunk Deck, để dành cho lần cập nhật Quiz sau |
-| POST | `/api/quizzes/attempts` | protected — ✅ đã implement, submit + chấm điểm (MULTIPLE_CHOICE/FILL_BLANK/TYPING/IMAGE_CHOICE/AUDIO_CHOICE; LISTENING/MATCHING/REORDER là "Quiz nâng cao" Phase 2, chưa chấm được), `xpEarned` luôn 0 (XP thật đợi Giai đoạn 7/D8) |
+| POST | `/api/quizzes/attempts` | protected — ✅ đã implement, submit + chấm điểm (MULTIPLE_CHOICE/FILL_BLANK/TYPING/IMAGE_CHOICE/AUDIO_CHOICE; LISTENING/MATCHING/REORDER là "Quiz nâng cao" Phase 2, chưa chấm được), cộng XP `QUIZ_COMPLETED` mỗi lần nộp bài (kể cả làm lại) + ghi `UserDailyActivity.studyMinutes` theo `durationSeconds` (Giai đoạn 7) |
 | GET | `/api/quizzes/attempts` | protected — ✅ đã implement, lịch sử của chính user, sort `completedAt` giảm dần |
 | GET | `/api/quizzes/attempts/{id}` | protected — ✅ đã implement, 404 nếu không thuộc currentUserId (không tiết lộ tồn tại) |
-| GET | `/api/progress/dashboard` | protected |
-| GET | `/api/leaderboard?period=WEEKLY` | protected |
+| GET | `/api/progress/dashboard` | protected — ✅ đã implement (Giai đoạn 7): Daily Goal progress (`todayStudyMinutes`/`todayWordsLearned`/`goalMet`), Streak (`currentStreak`/`longestStreak`), `totalXp`, `wordsToReviewCount` (khớp chính xác `GET /api/review/today`), `recentQuizAccuracy` (nullable), `continueLearning` (nullable — khoá học IN_PROGRESS cập nhật gần nhất + Lesson PUBLISHED chưa hoàn thành đầu tiên). Không có recent activity (module History chưa xây, Giai đoạn 8) hay recommended courses (chưa có thuật toán gợi ý) |
+| GET | `/api/leaderboard?period=WEEKLY` | protected — Phase 2, xem mục 11 |
 | GET/PUT/DELETE | `/api/favorites/**` | protected |
 | GET | `/api/history/recent` | protected |
 | GET/PUT | `/api/notifications/**` | protected |
@@ -662,7 +662,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | 4. Quiz | Question, QuestionOption, generate động theo `sourceType`, QuizAttempt, chấm điểm, lịch sử | ✅ Hoàn thành phạm vi MVP — sourceType=LESSON, type=MULTIPLE_CHOICE/FILL_BLANK/TYPING; COURSE/DECK/VOCAB_LIST và LISTENING/MATCHING/REORDER/IMAGE_CHOICE/AUDIO_CHOICE ("Quiz nâng cao") là Phase 2 hoặc phụ thuộc module chưa xây |
 | 5. Deck | Deck, DeckCard, Public/Private, Clone, Flashcard learning modes | ✅ Hoàn thành — Deck CRUD + DeckCard (add existing/custom word, remove) + Public search + Clone; Flashcard learning modes (Normal/Reverse/Shuffle) là FE render `GET /api/decks/{id}/cards` theo nhiều kiểu, không cần API riêng; đánh giá Forgot/Hard/Good/Easy dùng chung `POST /api/review/{vocabularyId}` (Giai đoạn 6) |
 | 6. Spaced Repetition | UserVocabularyProgress, ReviewLog, SM-2, Review Today | ✅ Hoàn thành phạm vi MVP — XP (`REVIEW_DONE`) và `UserDailyActivity` hoãn sang Giai đoạn 7 (cần `XpLog`/D8), cùng lịch với Lesson complete/Quiz |
-| 7. Progress & Gamification | CourseEnrollment, LessonProgress, UserDailyActivity, UserStreak, XpLog, Achievement, Leaderboard | ⏳ Chưa bắt đầu |
+| 7. Progress & Gamification | CourseEnrollment, LessonProgress, UserDailyActivity, XpLog, Progress Dashboard, Achievement, Leaderboard | ✅ Hoàn thành phạm vi MVP — `User` bổ sung `dailyGoalType`/`dailyGoalValue`/`lastActiveDate` (đặc tả gốc Giai đoạn 2, phát hiện thiếu khi làm chunk này); `XpLog`+`XpService` (D8 dual-write), `StreakService` (không tạo bảng `UserStreak` riêng — denormalized trên `User`), `UserDailyActivity`+`DailyActivityService` (goalMet + trigger Streak + bonus XP `DAILY_GOAL_MET`), `GET /api/progress/dashboard`; retrofit XP+DailyActivity vào Lesson complete/Quiz submit/Review submit (3 module đã xây trước đó). Đã verify qua curl thật + đối chiếu DB: `User.xp == SUM(XpLog.amount)` khớp 100%. `Achievement`/`Leaderboard` **cố tình hoãn** — thuộc Phase 2 theo mục 11, không phải MVP |
 | 8. Engagement | Favorite, ActivityHistory, Notification, StudyReminder, Search | ⏳ Chưa bắt đầu |
 | 9. Admin & Analytics | Admin Dashboard, thống kê User/Course/Learning | ⏳ Chưa bắt đầu |
 | 10. Production | Testing, Flyway/Liquibase, Performance, Security hardening, Docker, Logging, Monitoring | ⏳ Chưa bắt đầu |
@@ -794,6 +794,17 @@ Tiếp theo — luồng `Enroll` + `Complete Lesson` (`CourseEnrollment`, `Lesso
 - Đã test thật qua curl + DB: Review Today rỗng khi chưa có progress, submit GOOD lần đầu tạo đúng progress mặc định (`repetitionCount=1`, `easeFactor=2.5`, `nextReviewDate=hôm nay+1`), submit FORGOT tạo `forgotCount=1`/reset đúng, backdate `nextReviewDate` trực tiếp trong DB rồi gọi lại Review Today thấy đúng cả 2 từ sắp theo thứ tự quá hạn, submit GOOD lần 2 nhảy `interval` lên 6 ngày đúng kiểu SM-2, `ReviewLog` ghi đủ 3 dòng qua 3 lần đánh giá không ghi đè (verify DB trực tiếp), 401 khi chưa đăng nhập, 400 khi rating sai enum (sau khi fix bug). Đối chiếu `docs/testing/07_DATA_DICTIONARY.md` mục UserVocabularyProgress/ReviewLog — khớp hoàn toàn, không phát hiện lệch spec.
 - **Giới hạn phạm vi cố tình:** KHÔNG cộng XP (`reason=REVIEW_DONE`) và KHÔNG cập nhật `UserDailyActivity` — cùng lịch hoãn Giai đoạn 7 (`XpLog`/D8 chưa xây) như Lesson complete (Giai đoạn 3) và Quiz submit (Giai đoạn 4); Mastery Level tính thuần theo `repetitionCount` (không kết hợp `easeFactor`/`forgotCount` dù FRS gợi ý "suy ra từ 2 field đó" — đơn giản hoá có chủ đích, tương tự `score=accuracy` ở Quiz).
 
-Còn lại theo roadmap: Giai đoạn 7 (Progress & Gamification — `UserDailyActivity`, `UserStreak`, `XpLog`/D8, `Achievement`, `Leaderboard`; đây cũng là nơi giải quyết toàn bộ XP/Streak/Daily Goal đang hoãn từ Giai đoạn 3/4/6), Giai đoạn 8+ (Engagement/Admin Analytics/Production), cộng với `Tag`/`VocabularyTag`/`VocabularyRelation` (Phase 2, hoãn từ Giai đoạn 3).
+**Giai đoạn 7 — Progress & Gamification: ✅ Hoàn thành phạm vi MVP (2026-07-30).**
 
-Bước tiếp theo: Giai đoạn 7 — Progress & Gamification, bắt đầu từ `XpLog`/D8 (hạ tầng cộng XP dùng chung — 1 khi xây xong sẽ quay lại bổ sung XP cho cả Lesson complete/Quiz submit/Review submit đã hoãn), sau đó `UserDailyActivity`/`UserStreak` (D10 — theo timezone user) và `CourseEnrollment`/`LessonProgress` progress dashboard.
+- **Phát sinh ngoài kế hoạch, đã xin xác nhận trước khi làm:** Daily Goal setting (`dailyGoalType`/`dailyGoalValue`) theo đặc tả gốc thuộc Giai đoạn 2 (`docs/testing/12_FRS_TC_USER_PROFILE.md` mục 1.4) nhưng chưa từng được code — chỉ phát hiện khi cần cho `UserDailyActivity.goalMet` ở chunk này. Người dùng xác nhận thêm ngay (không hardcode default/không bỏ qua `goalMet`). Bổ sung `User.dailyGoalType`/`dailyGoalValue`/`lastActiveDate` + `DailyGoalType` enum + cập nhật `UserUpdateRequest`/`UserResponse`/`UserServiceImpl.updateMyProfile`.
+- `gamification/` package mới: `XpReason` enum (VOCAB_LEARNED/LESSON_COMPLETED/QUIZ_COMPLETED/REVIEW_DONE/DAILY_GOAL_MET/ACHIEVEMENT — giá trị cuối chưa dùng, để sẵn cho Phase 2), `XpLog` (kế thừa `BaseEntity` — Log/Transaction, D9) + `XpService`/`Impl` (`awardXp` — cộng `User.xp` VÀ ghi 1 dòng `XpLog` trong cùng transaction, đúng D8/CLAUDE.md #9), `StreakService`/`Impl` (cập nhật `currentStreak`/`longestStreak`/`lastActiveDate` trực tiếp trên `User` — **không tạo bảng `user_streak` riêng dù ERD gốc mô tả 1-1**, quyết định chốt khi code vì `currentStreak`/`longestStreak` đã denormalized sẵn lên `User` từ Giai đoạn 2, thêm bảng riêng sẽ tạo 2 nguồn sự thật cho cùng giá trị; reset về 1 — không về 0 — khi mất chuỗi, `longestStreak` chỉ tăng không giảm).
+- `progress/entity/UserDailyActivity` (kế thừa `BaseEntity`, state cộng dồn trong ngày giống `CourseEnrollment`/`LessonProgress`, unique `(user_id, activity_date)`) + `DailyActivityService`/`Impl` (`recordActivity` — find-or-create theo `activityDate` tính theo timezone User/D10, gọi `StreakService` đúng 1 lần khi là hoạt động đầu tiên trong ngày, cộng dồn `studyMinutes`/`wordsLearned`, cộng bonus XP `DAILY_GOAL_MET` đúng 1 lần khi `goalMet` chuyển false→true).
+- `ProgressDashboardService`/`Impl` + `GET /api/progress/dashboard`: Daily Goal progress, Streak, `totalXp`, `wordsToReviewCount` (dùng lại `ReviewService.getTodayReviews()` để đảm bảo khớp chính xác `GET /api/review/today` — TC-PROG-001), `recentQuizAccuracy` (nullable, từ `QuizAttempt` mới nhất), `continueLearning` (nullable — khoá học `IN_PROGRESS` cập nhật gần nhất + Lesson `PUBLISHED` chưa hoàn thành đầu tiên theo `displayOrder`, đóng nốt tính năng "Continue Learning" đã hoãn từ chunk Enroll/Complete Lesson). Loại trừ tường minh khỏi phạm vi: recent activity (module History chưa xây, Giai đoạn 8), recommended courses (chưa có thuật toán gợi ý).
+- Retrofit XP + `UserDailyActivity` vào 3 chunk đã xây trước đó (đều từng ghi rõ "hoãn tới Giai đoạn 7"): `LessonProgressServiceImpl.completeLesson` (`LESSON_COMPLETED`=10 XP, chỉ lần hoàn thành đầu, `studyMinutes += lesson.estimatedMinutes`), `QuizServiceImpl.submitQuiz` (`QUIZ_COMPLETED`=5 XP mỗi lần nộp kể cả làm lại, `studyMinutes += round(durationSeconds/60)`), `ReviewServiceImpl.submitReview` (`REVIEW_DONE`=2 XP mỗi lần, `VOCAB_LEARNED`=10 XP + `wordsLearned+=1` chỉ lần review đầu của từ đó — cùng điều kiện trigger). Số XP cụ thể là **quyết định chốt khi code** (FRS chỉ liệt kê `reason`, không cho số).
+- 5 Unit Test mới (`XpServiceImplTest`, `StreakServiceImplTest`, `DailyActivityServiceImplTest`, `ProgressDashboardServiceImplTest`) + cập nhật `LessonProgressServiceImplTest`/`QuizServiceImplTest`/`ReviewServiceImplTest`/`UserServiceImplTest` cho dependency mới (208 test toàn backend).
+- Đã test thật qua curl + đối chiếu DB: enroll → complete lesson (studyMinutes/xp đúng) → submit quiz (đúng, `recentQuizAccuracy` khớp) → submit review 2 từ mới (đạt Daily Goal WORDS=2, nhận đúng 1 lần bonus XP `DAILY_GOAL_MET`) → `GET /api/progress/dashboard` phản ánh đúng toàn bộ. Verify trực tiếp `users.xp == SUM(xp_log.amount)` = khớp 100% (bất biến D8).
+- **Cố tình hoãn:** `Achievement`/`UserAchievement`/Leaderboard — rà lại mục 11 (MVP vs Phase 2) trước khi bắt đầu chunk, phát hiện roadmap mục 12 gộp 2 tính năng này chung dòng "Giai đoạn 7" dù thuộc Phase 2 — cùng kiểu lệch đã gặp với `Tag`/`VocabularyTag`/`VocabularyRelation` ở Giai đoạn 3, áp dụng nhất quán cách xử lý (hoãn, không tự ý code thêm phạm vi ngoài MVP).
+
+Còn lại theo roadmap: Giai đoạn 8 (Engagement — Favorite/ActivityHistory/Notification/StudyReminder/Search), Giai đoạn 9 (Admin & Analytics), Giai đoạn 10 (Production), cộng với `Tag`/`VocabularyTag`/`VocabularyRelation` + `Achievement`/`Leaderboard` (Phase 2, hoãn từ Giai đoạn 3/7).
+
+Bước tiếp theo: Giai đoạn 8 — Engagement, bắt đầu từ `Favorite` (đơn giản nhất, join thuần `userId`+`targetType`+`targetId`) rồi tới `ActivityHistory`/`Notification`/`StudyReminder`/`Search`.

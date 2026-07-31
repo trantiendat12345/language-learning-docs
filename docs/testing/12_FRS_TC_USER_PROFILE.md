@@ -13,7 +13,7 @@
 
 **API:** `PUT /api/users/me` (protected)
 **Business Rules:**
-- Các field được sửa: `displayName`, `avatarUrl`, `birthday`, `gender`, `country`, `currentLevel`. `nativeLanguageId`/`learningLanguageId` **chưa implement** — 2 field này chưa tồn tại trong entity `User` (kế hoạch Giai đoạn 3 khi có entity `Language`, xem `docs/dev/SCHEMA_CHANGE_LOG.md`), nên TC-PROFILE-005/006 bên dưới chưa test được cho tới khi triển khai Giai đoạn 3.
+- Các field được sửa: `displayName`, `avatarUrl`, `birthday`, `gender`, `country`, `currentLevel`, `dailyGoalType`, `dailyGoalValue` (2 field cuối bổ sung ở Giai đoạn 7, xem mục 1.4). `nativeLanguageId`/`learningLanguageId` **chưa implement** — 2 field này chưa tồn tại trong entity `User` (kế hoạch Giai đoạn 3 khi có entity `Language`, xem `docs/dev/SCHEMA_CHANGE_LOG.md`), nên TC-PROFILE-005/006 bên dưới chưa test được cho tới khi triển khai Giai đoạn 3.
 - **Không** cho sửa qua endpoint này: `username`, `email`, `password`, `xp`, `coin`, `role`, `status` (đây là các field hệ thống quản lý hoặc cần luồng riêng) — Request DTO (`UserUpdateRequest`) cố tình không khai báo các field này nên Jackson tự bỏ qua nếu client cố gửi lên, không cần code chặn thủ công.
 - PUT thay toàn bộ field được phép sửa bằng giá trị gửi lên (kể cả null) — không phải PATCH từng phần; field nào không gửi trong JSON sẽ bị set về null.
 
@@ -26,7 +26,7 @@
 
 ### 1.4 Learning Settings (Daily Goal, ngôn ngữ học)
 
-**Mô tả:** Phần cài đặt ảnh hưởng trực tiếp tới module Progress/Gamification (`17_FRS_TC_PROGRESS_GAMIFICATION.md`). Đặt `Daily Goal` (theo thời gian: 5/10/20/30 phút, hoặc theo số từ: 10/20 từ).
+**Mô tả:** Phần cài đặt ảnh hưởng trực tiếp tới module Progress/Gamification (`17_FRS_TC_PROGRESS_GAMIFICATION.md`). Đặt `Daily Goal` (theo thời gian: 5/10/20/30 phút, hoặc theo số từ: 10/20 từ). **Đã implement ở Giai đoạn 7** (đặc tả gốc thuộc Giai đoạn 2 nhưng chưa từng được code, chỉ phát hiện khi cần cho `UserDailyActivity.goalMet` — xem `docs/PROJECT_OVERVIEW.md` mục 13) qua `PUT /api/users/me` với 2 field `dailyGoalType` (enum `TIME`/`WORDS`, không giới hạn tập giá trị cố định 5/10/20/30 như mô tả — client tự chọn số nguyên bất kỳ ≥ 1) và `dailyGoalValue` (int ≥ 1). Ngôn ngữ học (`nativeLanguageId`/`learningLanguageId`) vẫn chưa implement, xem mục 1.2.
 
 ### 1.5 Settings chung (Theme, Notification)
 
@@ -59,8 +59,8 @@
 | TC-PROFILE-009 | Đổi mật khẩu — sai mật khẩu hiện tại | Đã login | current=sai | | 401, errorCode `AUTH_INVALID_CREDENTIALS`, mật khẩu không đổi | Critical |
 | TC-PROFILE-010 | Đổi mật khẩu — mật khẩu mới quá yếu | Đã login | new=`123` | | 400 validate | Medium |
 | TC-PROFILE-011 | Đổi mật khẩu — confirm không khớp | Đã login | new≠confirm | | 400, errorCode `AUTH_PASSWORD_MISMATCH` | Medium |
-| TC-PROFILE-012 | Đặt Daily Goal theo thời gian | Đã login | Chọn Daily Goal = 20 phút/ngày | | 200, lưu đúng `goalType=TIME, goalValue=20` | High |
-| TC-PROFILE-013 | Đặt Daily Goal theo số từ | Đã login | Chọn 10 từ/ngày | | 200, `goalType=WORDS, goalValue=10` | High |
+| TC-PROFILE-012 | Đặt Daily Goal theo thời gian | Đã login | `PUT /api/users/me` | dailyGoalType=`TIME`, dailyGoalValue=20 | 200, lưu đúng `dailyGoalType=TIME, dailyGoalValue=20` — **đã test qua curl (Giai đoạn 7)** | High |
+| TC-PROFILE-013 | Đặt Daily Goal theo số từ | Đã login | `PUT /api/users/me` | dailyGoalType=`WORDS`, dailyGoalValue=10 | 200, `dailyGoalType=WORDS, dailyGoalValue=10` — **đã test qua curl (Giai đoạn 7)** | High |
 | TC-PROFILE-014 | User không xem được profile user khác qua API `/api/users/me` | Đã login user01 | Gọi `/api/users/me` | | Luôn trả về dữ liệu **của user01**, không có cách truyền id user khác vào endpoint này | Critical |
 | TC-PROFILE-015 | Gọi API profile khi chưa login | Chưa login | `GET /api/users/me` | | 401 | Critical |
 | TC-PROFILE-016 | Đổi Theme Light/Dark | Đã login | Toggle dark mode | | Giao diện đổi ngay lập tức, preference được lưu (localStorage hoặc user setting) và giữ nguyên sau khi reload | Medium |
