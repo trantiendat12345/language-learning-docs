@@ -28,6 +28,8 @@
 
 ## Phần 3 — Test Cases chi tiết
 
+> **Trạng thái implement (2026-08-01):** Mục 1.2 Study Reminder **đã test được đầy đủ** — TC-NOTI-008 → 012 test qua curl thật (tạo/sửa/toggle `isActive`/xoá, ownership 403 khi user khác thao tác). Mục 1.1 Notification **đã test được phần cá nhân** — TC-NOTI-001 → 003, 006, 007, 013, 014 test qua curl thật (list/mark-read/mark-all-read, không lộ giữa 2 user, ownership 403 khi mark-read của người khác, 401 chưa login, rỗng cho user mới); Notification được seed trực tiếp qua DB vì **chưa có trigger MVP nào tạo Notification tự động** (Achievement unlock là Phase 2, "Course mới" chỉ là ví dụ minh hoạ trong FRS, không có TC cụ thể). TC-NOTI-004, 005 (broadcast + trạng thái đọc độc lập theo user) **chưa implement** — chính TC-NOTI-004 tự ghi "(Phase 2)" vì cần Admin Notification management (`02_FEATURE_LIST.md` mục 9.10); `userId` trên `Notification` vẫn nullable đúng ERD nhưng chunk này chỉ dùng cho cá nhân, bảng phụ theo dõi đã đọc riêng theo user cho broadcast (gợi ý `NotificationRead` ở mục 1.1) chưa xây, xem `docs/dev/SCHEMA_CHANGE_LOG.md`.
+
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-NOTI-001 | Xem danh sách Notification | Đã login, có sẵn Notification | `GET /api/notifications` | | Trả danh sách đúng của user hiện tại, sắp xếp mới nhất trước | High |

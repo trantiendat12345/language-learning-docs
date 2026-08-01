@@ -219,8 +219,8 @@
 |---|---|---|
 | Favorite | `userId`, `targetType` (`COURSE`/`DECK`/`VOCABULARY`), `targetId`, `favoritedAt` | Unique `(userId, targetType, targetId)` — ✅ **đã có trong code** (Giai đoạn 8) |
 | ActivityHistory | `userId`, `targetType` (`COURSE`/`LESSON`/`DECK`/`VOCABULARY`), `targetId`, `action` (`VIEWED`/`LEARNED`/`REVIEWED`), `occurredAt` | Append-only (không unique), giới hạn số bản ghi qua `GET /api/history/recent?limit=` (mặc định 50) — ✅ **đã có trong code** (Giai đoạn 8), chỉ ghi cho 3 luồng: xem Course Detail (VIEWED), hoàn thành Lesson lần đầu (LEARNED), review từ vựng (REVIEWED) |
-| Notification | `userId` (nullable = broadcast toàn hệ thống), `type`, `title`, `message`, `linkUrl`, `isRead` | ⏳ **Chưa có trong code** |
-| StudyReminder | `userId`, `type` (`STUDY`/`FLASHCARD`/`REVIEW`), `reminderTime`, `daysOfWeek`, `channel` (`IN_APP`/`EMAIL`/`PUSH`), `isActive` | MVP chỉ hiện thực `IN_APP` — ⏳ **Chưa có trong code** |
+| Notification | `userId` (nullable = broadcast toàn hệ thống), `type`, `title`, `message`, `linkUrl`, `isRead`, `createdAt` | ✅ **đã có trong code** (Giai đoạn 8) — CHỈ hỗ trợ Notification cá nhân (`userId` luôn có giá trị), broadcast (`userId=null`) chưa có đường tạo (Phase 2), xem `docs/PROJECT_OVERVIEW.md` mục 13 |
+| StudyReminder | `userId`, `type` (`STUDY`/`FLASHCARD`/`REVIEW`), `reminderTime`, `daysOfWeek`, `channel` (`IN_APP`/`EMAIL`/`PUSH`), `isActive` | ✅ **đã có trong code** (Giai đoạn 8) — MVP chỉ `IN_APP` có tác dụng thật, `EMAIL`/`PUSH` lưu được nhưng chưa gửi (Phase 2) |
 
 ## 7. Trường Audit (áp dụng cho Content/Master data — xem D9)
 
