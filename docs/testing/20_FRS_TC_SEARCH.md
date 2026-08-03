@@ -27,6 +27,8 @@
 
 ## Phần 3 — Test Cases chi tiết
 
+> **Trạng thái implement (2026-08-03):** Mục 1.1 Tìm kiếm toàn hệ thống **đã test được đầy đủ** — TC-SEARCH-001 → 013 đã test qua curl thật (5 loại nội dung, DRAFT Course/Private Deck/Vocabulary custom đều ẩn đúng, gộp không truyền `type`, keyword rỗng trả rỗng có kiểm soát không query DB, SQL injection an toàn nhờ Criteria API tham số hoá, không phân biệt hoa/thường, phân trang 2 trang không trùng/không thiếu). Chế độ gộp (`type` bỏ trống) giới hạn tối đa 5 kết quả/loại, không hỗ trợ phân trang sâu — quyết định chốt khi code, xem `docs/PROJECT_OVERVIEW.md` mục 13. Mục 1.2 Admin Search User **chưa có trong code** — chưa tới lượt (Giai đoạn 9, xem `21_FRS_TC_ADMIN.md`).
+
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
 | TC-SEARCH-001 | Tìm Course theo keyword | Course "IELTS Vocabulary Booster" tồn tại PUBLISHED | `GET /api/search?q=IELTS&type=COURSE` | | Trả đúng course đó | High |
