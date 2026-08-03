@@ -502,12 +502,12 @@ com.languagelearning.language_learning_backend
 ├── gamification/        (streak, xp, achievement, leaderboard)
 ├── favorite/
 ├── history/
-├── notification/        (notification + reminder) ⏳ chưa có trong code
-├── search/              ⏳ chưa có trong code
-└── admin/               (analytics/dashboard queries, controller /api/admin/**) ⏳ chưa có trong code
+├── notification/        (notification + reminder)
+├── search/
+└── admin/               (analytics/dashboard queries, controller /api/admin/**)
 ```
 
-> Lưu ý: các `Admin*Controller` hiện tại (vd `AdminCourseController`, `AdminLessonController`, `AdminVocabularyController`...) nằm ngay trong package module tương ứng (`course/controller/`, `lesson/controller/`...), KHÔNG nằm trong 1 package `admin/` tập trung — package `admin/` riêng ở trên là thiết kế dành cho Giai đoạn 9 (Admin Dashboard/Analytics tổng hợp nhiều module, khác các CRUD admin theo từng entity đã có sẵn).
+> Lưu ý: các `Admin*Controller` theo từng entity (vd `AdminCourseController`, `AdminLessonController`, `AdminVocabularyController`...) nằm ngay trong package module tương ứng (`course/controller/`, `lesson/controller/`...), KHÔNG nằm trong package `admin/` tập trung — package `admin/` riêng ở trên (Giai đoạn 9) chỉ chứa `AdminDashboardController` (`/api/admin/dashboard`, tổng hợp số liệu nhiều module). Riêng `AdminUserController` (`/api/admin/users/**`, quản lý User) nằm trong `user/controller/` — cùng lý do đặt cạnh module nó quản lý, không đặt trong `admin/`.
 
 Trong module nghiệp vụ (ví dụ `vocabulary/`):
 
@@ -637,7 +637,13 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | PUT | `/api/notifications/read-all` | protected — ✅ đã implement, đánh dấu toàn bộ Notification chưa đọc của currentUser |
 | GET/POST/PUT/DELETE | `/api/reminders` | protected — ✅ đã implement (Giai đoạn 8, path phẳng thay vì lồng dưới `/api/notifications` — FRS để mở thiết kế), ownership check khi PUT/DELETE, `channel` bỏ trống mặc định `IN_APP` |
 | GET | `/api/search?q=&type=&page=&size=` | public — ✅ đã implement (Giai đoạn 8). `type` cụ thể (COURSE/LESSON/VOCABULARY/GRAMMAR/DECK) → phân trang đầy đủ chỉ loại đó; bỏ trống `type` → kết quả gộp cả 5 loại, mỗi loại giới hạn tối đa 5 kết quả (không phân trang sâu, quyết định chốt khi code). `q` rỗng/blank → trả rỗng có kiểm soát, không query DB. Chỉ trả nội dung PUBLISHED/ACTIVE/PUBLIC (không lộ DRAFT, Deck Private, Vocabulary custom của người khác) |
-| GET | `/api/admin/dashboard` | admin |
+| GET | `/api/admin/users?keyword=&page=&size=` | admin — ✅ đã implement (Giai đoạn 9), tìm theo username/email, không trả `passwordHash` |
+| GET | `/api/admin/users/{id}` | admin — ✅ đã implement |
+| GET | `/api/admin/users/{id}/progress` | admin — ✅ đã implement, trả `xp`/`currentStreak`/`longestStreak` + danh sách `CourseEnrollment` của user đó |
+| PUT | `/api/admin/users/{id}/activate` | admin — ✅ đã implement, `status=ACTIVE` |
+| PUT | `/api/admin/users/{id}/disable` | admin — ✅ đã implement, `status=DISABLED` + revoke toàn bộ RefreshToken ngay lập tức; 400 nếu Admin tự disable chính mình |
+| PUT | `/api/admin/users/{id}/lock` | admin — ✅ đã implement, `status=LOCKED` + revoke toàn bộ RefreshToken ngay lập tức; 400 nếu Admin tự lock chính mình |
+| GET | `/api/admin/dashboard` | admin — ✅ đã implement (Giai đoạn 9): `totalUsers`/`activeUsers`/`totalCourses`/`totalLessons`/`totalVocabulary`/`totalDecks`/`totalQuizAttempts` (đếm bằng `count()` mặc định của từng repository, tự động loại trừ bản ghi soft-delete nhờ `@SQLRestriction`). Không có "biểu đồ hoạt động học tập" — hoãn cùng "Biểu đồ thống kê nâng cao" (Phase 2, mục 11), FRS không có Test Case nào đặc tả cụ thể cho biểu đồ |
 
 ---
 
@@ -675,7 +681,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | 6. Spaced Repetition | UserVocabularyProgress, ReviewLog, SM-2, Review Today | ✅ Hoàn thành phạm vi MVP — XP (`REVIEW_DONE`) và `UserDailyActivity` hoãn sang Giai đoạn 7 (cần `XpLog`/D8), cùng lịch với Lesson complete/Quiz |
 | 7. Progress & Gamification | CourseEnrollment, LessonProgress, UserDailyActivity, XpLog, Progress Dashboard, Achievement, Leaderboard | ✅ Hoàn thành phạm vi MVP — `User` bổ sung `dailyGoalType`/`dailyGoalValue`/`lastActiveDate` (đặc tả gốc Giai đoạn 2, phát hiện thiếu khi làm chunk này); `XpLog`+`XpService` (D8 dual-write), `StreakService` (không tạo bảng `UserStreak` riêng — denormalized trên `User`), `UserDailyActivity`+`DailyActivityService` (goalMet + trigger Streak + bonus XP `DAILY_GOAL_MET`), `GET /api/progress/dashboard`; retrofit XP+DailyActivity vào Lesson complete/Quiz submit/Review submit (3 module đã xây trước đó). Đã verify qua curl thật + đối chiếu DB: `User.xp == SUM(XpLog.amount)` khớp 100%. `Achievement`/`Leaderboard` **cố tình hoãn** — thuộc Phase 2 theo mục 11, không phải MVP |
 | 8. Engagement | Favorite, ActivityHistory, Notification, StudyReminder, Search | ✅ Hoàn thành phạm vi MVP — xem mục 13 |
-| 9. Admin & Analytics | Admin Dashboard, thống kê User/Course/Learning | ⏳ Chưa bắt đầu |
+| 9. Admin & Analytics | Admin Dashboard, thống kê User/Course/Learning | ✅ Hoàn thành phạm vi MVP — xem mục 13 |
 | 10. Production | Testing, Flyway/Liquibase, Performance, Security hardening, Docker, Logging, Monitoring | ⏳ Chưa bắt đầu |
 
 Mỗi module triển khai theo quy trình 11 bước: phân tích → entity → quan hệ DB → API → Request DTO → Response DTO → Repository → Service → Controller → Security → code, kèm hướng dẫn test Postman/FE sau khi hoàn thành.
@@ -828,4 +834,13 @@ Tiếp theo — luồng `Enroll` + `Complete Lesson` (`CourseEnrollment`, `Lesso
 
 Còn lại theo roadmap: Giai đoạn 9 (Admin & Analytics), Giai đoạn 10 (Production), cộng với `Tag`/`VocabularyTag`/`VocabularyRelation` + `Achievement`/`Leaderboard` (Phase 2, hoãn từ Giai đoạn 3/7).
 
-Bước tiếp theo: Giai đoạn 9 — Admin & Analytics (Admin Dashboard số liệu tổng quan, Quản lý User Activate/Disable/Lock — các CRUD Admin theo từng entity đã có sẵn từ trước, phần còn thiếu là dashboard tổng hợp + quản lý User).
+**Giai đoạn 9 — Admin & Analytics: ✅ Hoàn thành phạm vi MVP (2026-08-03).** CRUD Admin theo từng entity (Language/Course/Lesson/Vocabulary/Grammar/Question) đã có sẵn từ các Giai đoạn 3/4 trước đó (`docs/testing/21_FRS_TC_ADMIN.md` mục 3.1/3.2) — chunk này chỉ xây phần còn thiếu: Quản lý User + Admin Dashboard.
+
+- **Quản lý User**: `AdminUserService`/`Impl` mới trong `user/service/` (tách biệt hẳn `UserService` — `UserService` luôn lấy `currentUserId` từ SecurityContext để thao tác trên chính bản ghi người gọi, `AdminUserService` thao tác trên `userId` bất kỳ truyền vào, chỉ ADMIN gọi được). `UserRepository` bổ sung `JpaSpecificationExecutor` + `UserSpecification.usernameOrEmailContains` (theo đúng mẫu Course/Deck/Vocabulary) + `countByStatus` (dùng cho Dashboard). `GET /api/admin/users` (tìm theo username/email, không trả `passwordHash` — tái dùng `UserResponse` sẵn có), `GET /{id}`, `GET /{id}/progress` (XP/Streak + toàn bộ `CourseEnrollment`, `CourseEnrollmentRepository` bổ sung `findAllByUserId`), `PUT /{id}/activate|disable|lock`. `disable`/`lock` revoke toàn bộ RefreshToken ngay lập tức (tái dùng đúng cơ chế đã có ở đổi mật khẩu) — đã verify qua curl+DB: revoke xong, login lại bị chặn ngay (`AUTH_ACCOUNT_DISABLED`/`AUTH_ACCOUNT_LOCKED`), không cần đợi access token hết hạn tự nhiên. **Quyết định chốt khi code** cho rủi ro FRS tự nêu (TC-ADMIN-026, "cần xác nhận rule"): **chặn cứng** Admin tự `disable`/`lock` chính mình (400 `BAD_REQUEST`, message riêng) — tránh tự khoá bản thân ra khỏi hệ thống, an toàn hơn cho vận hành thật.
+- **Admin Dashboard**: package `admin/` mới (đúng thiết kế mục 7.1, chỉ chứa phần tổng hợp nhiều module — khác CRUD admin theo entity vẫn nằm trong package module tương ứng). `GET /api/admin/dashboard` trả `totalUsers`/`activeUsers`/`totalCourses`/`totalLessons`/`totalVocabulary`/`totalDecks`/`totalQuizAttempts` — dùng `count()`/`countByStatus()` mặc định của từng repository, tự động loại trừ bản ghi soft-delete nhờ `@SQLRestriction` sẵn có trên Course/Lesson/Vocabulary/Deck/User (QuizAttempt là Log/Transaction data không soft-delete theo D9 nên đếm toàn bộ). **Cố tình chưa làm**: "biểu đồ hoạt động học tập" nhắc trong FRS mục 1.4 main flow — không có Test Case nào đặc tả cụ thể, hoãn cùng "Biểu đồ thống kê nâng cao" (Phase 2, mục 11 — `Learning Trends`/`Popular Courses`).
+- 12 Unit Test mới (`AdminUserServiceImplTest` 10, `AdminDashboardServiceImplTest` 1... — 254 test toàn backend). Đã test thật qua curl+DB: danh sách+tìm kiếm User không lộ password, disable→login bị chặn ngay+RefreshToken revoked=true trong DB, activate lại→login được, lock, admin tự disable chính mình→400, USER thường gọi `/api/admin/**`→403 (khi tài khoản không bị khoá — lưu ý test case dễ nhiễu nếu vô tình test ngay sau khi lock chính tài khoản đó, lúc đó sẽ nhận 401 thay vì 403 vì access token đã mất hiệu lực, không phải bug phân quyền), chưa login→401, xem tiến độ 1 User, Dashboard đếm đúng và tăng đúng +1 khi có Course mới.
+- **Cố tình hoãn** (Phase 2, đã xác nhận qua `docs/testing/02_FEATURE_LIST.md` mục 9.9-9.11): CRUD Achievement, Quản lý Notification (broadcast), biểu đồ thống kê nâng cao.
+
+Còn lại theo roadmap: Giai đoạn 10 (Production — Testing, Flyway/Liquibase, Performance, Security hardening, Docker, Logging, Monitoring), cộng với `Tag`/`VocabularyTag`/`VocabularyRelation` + `Achievement`/`Leaderboard`/Notification broadcast/biểu đồ nâng cao (Phase 2, hoãn từ Giai đoạn 3/7/8/9).
+
+Bước tiếp theo: Giai đoạn 10 — Production.

@@ -50,6 +50,8 @@ Toàn bộ endpoint `/api/admin/**` áp dụng chung các quy tắc sau (áp d�
 7. Admin Dashboard hiển thị đúng số liệu tổng hợp, loại trừ dữ liệu đã xoá mềm.
 8. Validate dữ liệu khi tạo/sửa (field bắt buộc, độ dài, định dạng, unique).
 
+> **Trạng thái implement (2026-08-03):** Mục 1.1/1.2 (CRUD Language/Course/Lesson/Vocabulary/Grammar/Question, TC-ADMIN-001 → 017) **đã test được** — hoàn thành từ Giai đoạn 3/4, đầy đủ ownership Vocabulary custom (TC-ADMIN-014), Question out-of-scope. Mục 1.3 Quản lý User (TC-ADMIN-018 → 027) **đã test được đầy đủ** — `GET/PUT /api/admin/users/**`, revoke RefreshToken ngay khi disable/lock (TC-ADMIN-020/022 verify qua DB), TC-ADMIN-026 chốt **chặn cứng** Admin tự disable/lock chính mình (400, không phải "cho phép nhưng cảnh báo"). Mục 1.4 Admin Dashboard (TC-ADMIN-028 → 031) **đã test được** — số liệu tổng quan đúng, tăng đúng khi có dữ liệu mới; "biểu đồ hoạt động học tập" nhắc ở mục 1.4 main flow **chưa làm**, hoãn cùng "Biểu đồ thống kê nâng cao" (Phase 2, mục 9.11 `02_FEATURE_LIST.md`) vì không có TC nào đặc tả cụ thể. CRUD Achievement (9.9), Quản lý Notification broadcast (9.10) — chưa làm, Phase 2.
+
 ## Phần 3 — Test Cases chi tiết
 
 ### 3.1 CRUD nội dung (mẫu áp dụng chung — lặp lại cho từng entity: Language, Course, Lesson, Vocabulary, Grammar, Question)

@@ -82,6 +82,12 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 | `DUPLICATE_RESOURCE` (dùng chung, không tạo `DECK_CARD_ALREADY_EXISTS` riêng) | 409 | TC-DECK-009 — thêm trùng 1 từ vào cùng Deck, `DeckServiceImpl.addCard` ném `DuplicateResourceException` với message riêng, giữ nguyên errorCode chung |
 | `RESOURCE_NOT_FOUND` (dùng chung, không tạo `DECK_CLONE_SOURCE_NOT_PUBLIC` riêng) | 404 | TC-DECK-019 — clone Deck Private của người khác, `DeckServiceImpl.cloneDeck` ném `ResourceNotFoundException` (cùng quy tắc "không tiết lộ tồn tại" như GET) |
 
+### Admin User Management (Giai đoạn 9 — đã implement, không dùng errorCode riêng)
+
+| `errorCode` | HTTP `code` | Test Case liên quan |
+|---|---|---|
+| `BAD_REQUEST` (dùng chung message riêng, không tạo errorCode mới) | 400 | TC-ADMIN-026 — Admin tự `disable`/`lock` chính tài khoản ADMIN của mình, `AdminUserServiceImpl.requireNotSelf` ném `BadRequestException` (tránh tự khoá bản thân ra khỏi hệ thống) |
+
 > **Quy tắc bổ sung dòng mới:** khi implement 1 module và cần 1 error code chưa có trong bảng, thêm ngay vào đây trong cùng commit — không để `errorCode` "trôi nổi" chỉ tồn tại trong code.
 
 ## 4. Nguyên tắc bắt buộc
