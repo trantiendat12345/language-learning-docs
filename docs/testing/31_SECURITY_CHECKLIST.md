@@ -48,3 +48,19 @@
 ## 7. Cách ghi nhận kết quả
 
 Mỗi mục không đạt trong checklist này **luôn** báo cáo với `Severity` tối thiểu **Major**, và **Critical** nếu thuộc nhóm 2 (Authorization) hoặc 4 (lộ dữ liệu nhạy cảm) — theo quy ước tại `10_BUG_REPORT_TEMPLATE.md`. Dùng đúng mẫu Bug Report, mục "Steps to Reproduce" phải đủ chi tiết để Dev tái hiện được (payload cụ thể đã gửi, header, response nhận được).
+
+## 8. Kết quả Security Audit (2026-08-03, Giai đoạn 10)
+
+Audit thủ công theo checklist trên bằng 5 agent đọc code song song (không phải pentest tự động), phạm vi: toàn bộ backend đã triển khai tới hết Giai đoạn 9. Đã sửa và verify (unit test + `./mvnw test` 268/268 pass + E2E curl):
+
+- **Nhóm 2 (Authorization) — Critical, đã sửa:** `VocabularyServiceImpl.updateVocabulary/deleteVocabulary/getVocabularyByIdForAdmin` (qua `AdminVocabularyController`) không kiểm tra `vocabulary.getOwner() == null` trước khi cho Admin thao tác — cho phép Admin sửa/xoá cả Vocabulary custom do User tự tạo, vi phạm D1 và `06_ROLES_PERMISSIONS_MATRIX.md` (đúng TC-ADMIN-014, `21_FRS_TC_ADMIN.md`). Đã thêm check owner ở `findVocabularyOrThrow` (trả 404, không tiết lộ tồn tại — cùng quy tắc `getSystemVocabularyById`), thêm filter `isSystemWord()` vào `getAllVocabulariesForAdmin`. Xem `docs/dev/SCHEMA_CHANGE_LOG.md`.
+- **Nhóm 3 (Input Validation) — Major, đã sửa (2 gap):**
+  - 5 field String thiếu `@Size` khớp `@Column(length=...)` của entity, có thể gây lỗi 500 ở tầng DB khi vượt giới hạn thay vì 400 ở tầng validate: `QuizAnswerRequest.typedAnswer`, `StudyReminderCreateRequest`/`UpdateRequest.daysOfWeek`, `RegisterRequest`/`ForgotPasswordRequest.email`. Đã thêm `@Size` đúng độ dài cột.
+  - ~10 field URL ảnh/audio/video (thumbnailUrl, coverImageUrl, imageUrl, avatarUrl, flagIconUrl, videoUrl, audioUrl, promptAudioUrl/promptImageUrl, optionImageUrl — trải trên 15 DTO) không chặn scheme nguy hiểm (`javascript:`, `data:`...). Đã thêm custom Bean Validation `@SafeUrl` dùng chung (`common/validation/SafeUrl` + `SafeUrlValidator`, package mới — xem `docs/PROJECT_OVERVIEW.md` mục 7.1) chỉ chấp nhận `http://`/`https://` tuyệt đối hoặc đường dẫn tương đối, áp dụng cho toàn bộ field trên.
+- **Robustness liên quan (không phải mục checklist, phát hiện cùng đợt):** thêm `@ExceptionHandler(DataIntegrityViolationException.class)` vào `GlobalExceptionHandler` trả 409 `DUPLICATE_RESOURCE` thay vì rơi vào catch-all 500, phòng race condition (2 request đồng thời cùng insert `UserVocabularyProgress` mới, request thua vi phạm unique constraint).
+
+**Gap đã biết, cố ý KHÔNG sửa trong đợt này** (ghi nhận để làm sau, không phải bỏ sót):
+
+- Field `TEXT` không giới hạn kích thước (description/explanation/exampleSentence... trên ~8 entity) — rủi ro thấp hơn VARCHAR ngắn (MySQL TEXT chịu được ~65KB), phạm vi sửa lớn hơn 10+ field, để lại cho 1 đợt riêng nếu cần.
+- Rate-limiting toàn hệ thống (kể cả login) — chưa có ở bất kỳ đâu, đã ghi trong `docs/testing/11_FRS_TC_AUTH.md`, thuộc phạm vi rộng hơn "Performance/Security hardening" của Giai đoạn 10, cần làm ở 1 chunk riêng.
+- Log level `info` cho token verify/reset-password (lộ link test qua log) — **bắt buộc hạ xuống `debug` trước khi go-live thật**, nhưng giữ nguyên `info` ở giai đoạn hiện tại vì đây là cách duy nhất dev/tester lấy được link test khi MVP chưa gửi email thật.

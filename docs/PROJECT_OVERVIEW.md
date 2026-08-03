@@ -482,6 +482,7 @@ com.languagelearning.language_learning_backend
 │   ├── entity/        (BaseEntity, AuditableEntity)
 │   ├── dto/            (ApiResponse<T>, PageResponse<T>, ApiErrorResponse)
 │   ├── constant/        (ErrorCode, ErrorMessage, CommonMessage - message/error code không hardcode rải rác trong code)
+│   ├── validation/      (SafeUrl + SafeUrlValidator - custom Bean Validation dùng chung, thêm ở Giai đoạn 10 Security Audit)
 │   ├── enums/          (Status, Difficulty...)
 │   └── util/
 ├── config/              (SecurityConfig, CorsConfig, OpenApiConfig, JpaAuditingConfig)
@@ -682,7 +683,7 @@ Bảng dưới đây là **thiết kế đầy đủ** cho toàn bộ hệ thố
 | 7. Progress & Gamification | CourseEnrollment, LessonProgress, UserDailyActivity, XpLog, Progress Dashboard, Achievement, Leaderboard | ✅ Hoàn thành phạm vi MVP — `User` bổ sung `dailyGoalType`/`dailyGoalValue`/`lastActiveDate` (đặc tả gốc Giai đoạn 2, phát hiện thiếu khi làm chunk này); `XpLog`+`XpService` (D8 dual-write), `StreakService` (không tạo bảng `UserStreak` riêng — denormalized trên `User`), `UserDailyActivity`+`DailyActivityService` (goalMet + trigger Streak + bonus XP `DAILY_GOAL_MET`), `GET /api/progress/dashboard`; retrofit XP+DailyActivity vào Lesson complete/Quiz submit/Review submit (3 module đã xây trước đó). Đã verify qua curl thật + đối chiếu DB: `User.xp == SUM(XpLog.amount)` khớp 100%. `Achievement`/`Leaderboard` **cố tình hoãn** — thuộc Phase 2 theo mục 11, không phải MVP |
 | 8. Engagement | Favorite, ActivityHistory, Notification, StudyReminder, Search | ✅ Hoàn thành phạm vi MVP — xem mục 13 |
 | 9. Admin & Analytics | Admin Dashboard, thống kê User/Course/Learning | ✅ Hoàn thành phạm vi MVP — xem mục 13 |
-| 10. Production | Testing, Flyway/Liquibase, Performance, Security hardening, Docker, Logging, Monitoring | ⏳ Chưa bắt đầu |
+| 10. Production | Testing, Flyway/Liquibase, Performance, Security hardening, Docker, Logging, Monitoring | 🔄 Đang thực hiện — Security Audit (2026-08-03) xong, xem mục 13 |
 
 Mỗi module triển khai theo quy trình 11 bước: phân tích → entity → quan hệ DB → API → Request DTO → Response DTO → Repository → Service → Controller → Security → code, kèm hướng dẫn test Postman/FE sau khi hoàn thành.
 
@@ -843,4 +844,14 @@ Còn lại theo roadmap: Giai đoạn 9 (Admin & Analytics), Giai đoạn 10 (Pr
 
 Còn lại theo roadmap: Giai đoạn 10 (Production — Testing, Flyway/Liquibase, Performance, Security hardening, Docker, Logging, Monitoring), cộng với `Tag`/`VocabularyTag`/`VocabularyRelation` + `Achievement`/`Leaderboard`/Notification broadcast/biểu đồ nâng cao (Phase 2, hoãn từ Giai đoạn 3/7/8/9).
 
-Bước tiếp theo: Giai đoạn 10 — Production.
+**Giai đoạn 10 — Production: 🔄 Đang thực hiện.** Nhiều hạng mục khác nhau (Testing/Flyway/Performance/Security/Docker/Logging/Monitoring) — người dùng xác nhận ưu tiên **Security Audit trước**.
+
+**Security Audit (2026-08-03): ✅ Hoàn thành.** Audit thủ công theo `docs/testing/31_SECURITY_CHECKLIST.md` bằng 5 agent đọc code song song (không phải pentest tự động), phạm vi toàn bộ backend tới hết Giai đoạn 9. Chi tiết đầy đủ từng phát hiện (mô tả lỗi, cách sửa, gap cố tình chưa sửa): `docs/testing/31_SECURITY_CHECKLIST.md` mục 8.
+
+- Sửa 1 lỗ hổng Authorization (Critical): Admin sửa/xoá được cả Vocabulary custom của User qua `AdminVocabularyController` (thiếu check `owner == null`) — vi phạm D1.
+- Sửa 2 gap Input Validation (Major): 5 field String thiếu `@Size` khớp `@Column(length)`; ~10 field URL ảnh/audio/video không chặn scheme `javascript:`/`data:` — thêm custom validator dùng chung `common/validation/SafeUrl` (package mới, xem mục 7.1).
+- Thêm robustness liên quan: `GlobalExceptionHandler` bắt `DataIntegrityViolationException` trả 409 thay vì rơi vào catch-all 500 (phòng race condition unique constraint).
+- 15 Unit Test mới (`VocabularyServiceImplTest` +3, `SafeUrlValidatorTest` 9 case, `GlobalExceptionHandlerTest` +1 — 268 test toàn backend). Đã verify qua `./mvnw test` (268/268 pass) và E2E curl thật: Admin không sửa/xoá được Vocabulary custom (404, không tiết lộ tồn tại) nhưng vẫn sửa được Vocabulary hệ thống bình thường (không regression), tạo Language với `flagIconUrl=javascript:alert(1)` bị chặn 400 đúng message, `daysOfWeek` vượt 50 ký tự bị chặn 400.
+- **Gap đã biết, cố ý chưa sửa đợt này** (ghi rõ lý do ở `31_SECURITY_CHECKLIST.md` mục 8): field `TEXT` không giới hạn kích thước (~8 entity, rủi ro thấp hơn VARCHAR ngắn); rate-limiting toàn hệ thống (đã ghi nhận từ trước ở `11_FRS_TC_AUTH.md`); log level `info` cho token verify/reset-password (cần hạ `debug` trước khi go-live thật, giữ nguyên vì đang là cách duy nhất lấy link test khi MVP chưa gửi email thật).
+
+Bước tiếp theo: các hạng mục còn lại của Giai đoạn 10 (Testing bổ sung, Flyway/Liquibase, Performance, Docker, Logging, Monitoring) — chưa chốt thứ tự, cần hỏi lại người dùng ưu tiên hạng mục nào tiếp theo.
