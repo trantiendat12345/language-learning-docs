@@ -568,14 +568,15 @@ src/
 ├── api/            (axiosClient.ts, tokenStore.ts, apiError.ts)
 ├── assets/
 ├── components/
-│   ├── ui/          (Design System atoms ✅ — Button, ButtonLink, Input, Card, Spinner, ProgressRing, index.ts barrel)
+│   ├── ui/          (Design System atoms ✅ — Button, ButtonLink, Input, Select, Card, Badge, Spinner, Skeleton, Pagination, ProgressRing, index.ts barrel)
 │   ├── dashboard/    (StatTile, TodayGoalCard, ContinueLearningCard, WeeklyProgressChart, RecentActivityList, RecommendedCourses, AchievementsPreview, LeaderboardPreview ✅ — composed component riêng cho Dashboard, mỗi component 1 file .module.scss)
-│   └── common/       (Navbar.tsx ✅, Logo.tsx ✅, ThemeToggle.tsx ✅, components/vocabulary, components/deck...)
+│   ├── courses/      (CourseCard, CourseCardSkeleton ✅ — composed component riêng cho Course List/Detail)
+│   └── common/       (Navbar.tsx ✅, Logo.tsx ✅, ThemeToggle.tsx ✅, components/deck...)
 ├── contexts/        (AuthContext.tsx ✅, ThemeContext.tsx ✅)
 ├── hooks/           (useDebounce, usePagination — useAuthContext/useThemeContext nằm ngay trong Context tương ứng theo convention mục 2.1)
 ├── layouts/         (PublicLayout ✅, AuthLayout ✅, UserLayout ✅, AdminLayout)
 ├── mock/            (dashboardMock.ts ✅ — mock data riêng cho phần Dashboard chưa có API thật, xem mục 8.1)
-├── pages/           (pages/auth/{LoginPage,RegisterPage,ForgotPasswordPage,ResetPasswordPage,VerifyEmailPage}.tsx ✅ — đã redesign theo Design System 2026-08-06, pages/auth/AuthForm.module.scss dùng chung, DashboardPage.tsx ✅ — đã redesign 2026-08-06 (dữ liệu thật qua ProgressDashboard + History + Course API, chỉ Achievement/Leaderboard dùng mock), ProfilePage.tsx ✅ — chưa redesign, pages/courses/{CourseListPage,CourseDetailPage}.tsx ✅ — chưa redesign)
+├── pages/           (pages/auth/{LoginPage,RegisterPage,ForgotPasswordPage,ResetPasswordPage,VerifyEmailPage}.tsx ✅ — đã redesign theo Design System 2026-08-06, pages/auth/AuthForm.module.scss dùng chung, DashboardPage.tsx ✅ — đã redesign 2026-08-06 (dữ liệu thật qua ProgressDashboard + History + Course API, chỉ Achievement/Leaderboard dùng mock), pages/courses/CourseListPage.tsx ✅ — đã redesign 2026-08-06 (filter+grid+pagination, dữ liệu thật), CourseDetailPage.tsx — chưa redesign, ProfilePage.tsx ✅ — chưa redesign)
 ├── routes/           (AppRoutes.tsx ✅, PublicRoute.tsx ✅, ProtectedRoute.tsx ✅, AdminRoute)
 ├── services/         (authService.ts ✅, userService.ts ✅ đủ 3 method /api/users/me, courseService.ts ✅, languageService.ts ✅, progressService.ts ✅ (GET /api/progress/dashboard), historyService.ts ✅ (GET /api/history/recent)...)
 ├── types/            (api.ts ✅, auth.ts ✅, user.ts ✅ — khớp 1-1 Response/Request DTO backend, progress.ts ✅ bổ sung ProgressDashboardResponse/ContinueLearningResponse, history.ts ✅ mới)
@@ -596,7 +597,7 @@ Người dùng yêu cầu redesign toàn bộ Frontend đạt chất lượng s�
 - **Icon**: `lucide-react` (icon set, không phải UI library nên không vi phạm yêu cầu "không dùng thư viện UI có sẵn") — dùng đồng bộ toàn site, không trộn nhiều bộ icon.
 - **Component Library** (`components/ui/`, export qua `index.ts` barrel): `Button` (5 variant, 3 size, ripple effect tự vẽ bằng JS + CSS animation, loading spinner tích hợp), `ButtonLink` (React Router `Link` nhìn giống `Button` — dùng khi hành động là điều hướng, không submit), `Input` (forwardRef tương thích `react-hook-form`, có label/error/hint, password field tự có nút hiện/ẩn), `Card` (hoverable + padding variant), `Spinner`. Mở rộng dần theo nhu cầu từng màn hình, không xây trước toàn bộ danh sách component khi chưa có nơi dùng.
 - **Layout mới**: `AuthLayout` (split-screen 2 cột — panel trái gradient primary→secondary kèm blob glass effect + value proposition, panel phải form; responsive: panel trái ẩn dưới `lg`) dùng cho toàn bộ luồng Auth (Login/Register/ForgotPassword/ResetPassword/VerifyEmail), thay cho `PublicLayout` + `Navbar` mặc định trước đó.
-- **Quyết định phạm vi**: redesign lại cả trang đã có sẵn (không chỉ trang mới) để tránh giao diện nửa cũ nửa mới — đã làm xong Auth + Dashboard, còn Course List/Course Detail/Profile vẫn đang ở giao diện Bootstrap cũ, sẽ redesign lần lượt theo đúng thứ tự đã thống nhất: ~~Dashboard~~ → Course List → Course Detail → Lesson → Vocabulary Learning → Flashcard → Quiz → Review → Profile → Admin Dashboard → Landing Page (làm sau cùng).
+- **Quyết định phạm vi**: redesign lại cả trang đã có sẵn (không chỉ trang mới) để tránh giao diện nửa cũ nửa mới — đã làm xong Auth + Dashboard + Course List, còn Course Detail/Profile vẫn đang ở giao diện Bootstrap cũ, sẽ redesign lần lượt theo đúng thứ tự đã thống nhất: ~~Dashboard~~ → ~~Course List~~ → Course Detail → Lesson → Vocabulary Learning → Flashcard → Quiz → Review → Profile → Admin Dashboard → Landing Page (làm sau cùng).
 - Nhiều màn hình được yêu cầu (Achievement, Leaderboard, Pricing, Speaking Practice, Admin Achievement/Notification management, Study Statistics nâng cao...) tương ứng tính năng Backend thuộc Phase 2/chưa xây (xem mục 11) — sẽ code UI bằng mock data theo đúng yêu cầu, chưa "sống" bằng dữ liệu thật cho tới khi Backend triển khai.
 
 ---
@@ -908,4 +909,8 @@ Chunk đầu tiên — **`UserLayout` + Course List/Detail + Enroll** (điểm v
   - Test E2E qua Playwright + Backend thật (seed Language/2 Course/1 Lesson qua Admin API, enroll, set XP/streak/daily-activity/activity-history trực tiếp DB cho nhanh vì không có API set streak thủ công): toàn bộ số liệu thật hiển thị đúng (streak/XP/mục tiêu/tiếp tục học/khoá học gợi ý/hoạt động gần đây với thời gian tương đối đúng), light/dark/mobile đều ổn, cột "hôm nay" trong Weekly Chart tô đúng màu accent theo `Date().getDay()` thật. Đã dọn sạch dữ liệu test khỏi DB.
   - Commit: client `[V12]`, docs `[V31]`.
 
-Bước tiếp theo: **Course List** (redesign lại theo Design System, trang đã có sẵn từ chunk trước nhưng còn giao diện Bootstrap cũ).
+- **Chunk 3 — Course List**: bổ sung 4 component `ui/` dùng lại được nhiều nơi sau này — `Badge` (variant neutral/primary/secondary/accent/success, dùng cho difficulty/language tag), `Select` (native `<select>` style lại theo token, forwardRef tương thích `react-hook-form` như `Input`), `Skeleton` (shimmer loading, thay chỗ chỉ có `Spinner` trước đây), `Pagination` (tính toán rút gọn số trang bằng `…`, thay hoàn toàn `nav.pagination` mặc định của Bootstrap). Component riêng `components/courses/CourseCard` + `CourseCardSkeleton` (grid ảnh 16:9, gradient placeholder khi không có `thumbnailUrl`, badge ngôn ngữ+trình độ, hover nâng thẻ).
+  - Test E2E qua Playwright + Backend thật: seed 14 khoá học PUBLISHED (đủ vượt `PAGE_SIZE=12` để test Pagination thật) gồm cả có/không `thumbnailUrl`. **Phát hiện lỗi khi seed (không phải bug code):** gọi `PUT` publish quên gửi lại `thumbnailUrl` đã set lúc tạo → bị ghi đè thành `null` (đúng hành vi update-toàn-field hiện có của `CourseServiceImpl.updateCourse`, không phải bug) — sửa lại request seed để verify đúng nhánh hiển thị ảnh thật. Đã xác nhận: ảnh thật hiển thị đúng tỉ lệ 16:9, filter theo keyword đúng, pagination chuyển trang đúng (rút gọn số trang, disable nút khi ở đầu/cuối), empty state khi filter không khớp, responsive mobile (filter xếp dọc, grid 1 cột) — cả light/dark. Đã dọn sạch dữ liệu test khỏi DB.
+  - Commit: client `[V13]`, docs `[V32]`.
+
+Bước tiếp theo: **Course Detail** (redesign lại theo Design System, trang đã có sẵn từ chunk trước nhưng còn giao diện Bootstrap cũ) — tái dùng `Badge`/`Skeleton` vừa xây ở Course List.
