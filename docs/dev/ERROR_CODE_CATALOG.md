@@ -45,7 +45,7 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 | `AUTH_INVALID_CREDENTIALS` | 401 | TC-AUTH-009, 010 (message phải giống hệt nhau giữa 2 case này), TC-PROFILE-009 (sai currentPassword khi đổi mật khẩu — dùng chung `InvalidCredentialsException`) |
 | `AUTH_ACCOUNT_DISABLED` | 401 | TC-AUTH-011 |
 | `AUTH_ACCOUNT_LOCKED` | 401 | TC-AUTH-012 |
-| `AUTH_EMAIL_NOT_VERIFIED` | 401 | TC-AUTH-013 (status PENDING_VERIFICATION — chặn đăng nhập hoàn toàn, xem `docs/testing/11_FRS_TC_AUTH.md` mục 1.2) |
+| `AUTH_EMAIL_NOT_VERIFIED` | 401 | **Tắt từ 2026-08-06** — hạ tầng còn giữ (`EmailNotVerifiedException` chưa xoá) nhưng không còn được ném ra qua flow chuẩn (`login()` xử lý PENDING_VERIFICATION như ACTIVE), vì MVP tắt bước xác thực email. Xem `docs/testing/11_FRS_TC_AUTH.md` mục 1.1/1.2, TC-AUTH-013 |
 | `AUTH_TOKEN_EXPIRED` | 401 | TC-AUTH-017 (refresh-token), TC-AUTH-025 (reset-password), TC-AUTH-027 (verify-email) — dùng chung `TokenExpiredException` |
 | `AUTH_TOKEN_INVALID` | 401 | TC-AUTH-018, 031 (refresh-token, kể cả thiếu cookie), TC-AUTH-033 (reset-password) — dùng chung `TokenInvalidException` |
 | `AUTH_TOKEN_ALREADY_USED` | 400 | TC-AUTH-024 (reset-password token dùng lại), TC-AUTH-034 (verify-email token dùng lại) — dùng chung `TokenAlreadyUsedException` |

@@ -13,9 +13,11 @@
 **Use Case:**
 - **Actor:** Guest
 - **Precondition:** Chưa đăng nhập
-- **Main flow:** Nhập username, email, password, confirm password → submit → hệ thống tạo `User` với `status = PENDING_VERIFICATION` (đã chốt — xem quyết định ở mục 1.2 bên dưới), gửi email xác thực (MVP: log link ra console) → trả về thông báo thành công.
+- **Main flow:** Nhập username, email, password, confirm password → submit → hệ thống tạo `User` với `status = ACTIVE`, dùng được ngay không cần xác thực email → trả về thông báo thành công.
 - **Exception flow:** username/email đã tồn tại → lỗi 409 "đã tồn tại" (`AUTH_USERNAME_TAKEN`/`AUTH_EMAIL_TAKEN`, xem `docs/dev/ERROR_CODE_CATALOG.md`); password không khớp confirm → lỗi 400 (`AUTH_PASSWORD_MISMATCH`); thiếu field bắt buộc → lỗi validate 400.
-- **Postcondition:** Bản ghi `User` mới + `VerificationToken` type `EMAIL_VERIFY` được tạo. `timezone` không thu thập ở form đăng ký, được set mặc định `Asia/Ho_Chi_Minh` (xem `docs/testing/07_DATA_DICTIONARY.md`).
+- **Postcondition:** Bản ghi `User` mới với `status = ACTIVE`. `timezone` không thu thập ở form đăng ký, được set mặc định `Asia/Ho_Chi_Minh` (xem `docs/testing/07_DATA_DICTIONARY.md`).
+
+> **Quyết định chốt khi code (2026-08-06, thay thế quyết định gốc ở mục 1.2):** Tắt hẳn bước xác thực email sau đăng ký — hệ thống chưa gửi email thật (chỉ log link ra console, gây bất tiện khi test/dùng thử thủ công). Register không còn set `status = PENDING_VERIFICATION`, không còn tạo `VerificationToken` type `EMAIL_VERIFY`, không còn log link xác thực. Hạ tầng xác thực email (`GET /api/auth/verify-email`, `EmailNotVerifiedException`, `TokenType.EMAIL_VERIFY`, trạng thái `PENDING_VERIFICATION` trên `UserStatus`) **vẫn giữ nguyên trong code**, không bị xoá — chỉ không còn được kích hoạt qua flow chuẩn, để bật lại khi có tích hợp gửi email thật. `AuthService.login()` xử lý `PENDING_VERIFICATION` tương đương `ACTIVE` (không chặn) để tương thích ngược với các row cũ nếu có.
 
 **Business Rules riêng module:**
 - Username: 3–50 ký tự, không chứa khoảng trắng, unique không phân biệt hoa/thường.
@@ -33,7 +35,7 @@
   - Sai username/password → 401, thông báo chung chung "Sai thông tin đăng nhập" (không tiết lộ username tồn tại hay không, tránh dò tài khoản).
   - `status = DISABLED` → lỗi rõ ràng "Tài khoản đã bị vô hiệu hoá".
   - `status = LOCKED` → lỗi rõ ràng "Tài khoản đang bị khoá".
-  - `status = PENDING_VERIFICATION` → **đã chốt: chặn đăng nhập hoàn toàn**, trả 401 kèm errorCode `AUTH_EMAIL_NOT_VERIFIED` và message riêng "Vui lòng xác thực email trước khi đăng nhập" — nhất quán với cách xử lý DISABLED/LOCKED (message rõ ràng, không gộp chung với case sai mật khẩu), vì user vừa đăng ký tài khoản này nên biết rõ trạng thái, không phát sinh rủi ro dò username như case sai mật khẩu/username lạ. `AuthService.login()` kiểm tra `status` thủ công trước khi xác thực JWT (không dùng `AuthenticationManager`/`isEnabled()`). Phải xác thực email trước mới đăng nhập được.
+  - `status = PENDING_VERIFICATION` → **đã đổi quyết định (2026-08-06, xem mục 1.1)**: KHÔNG còn chặn đăng nhập — xử lý như `ACTIVE`, đăng nhập bình thường. Quyết định gốc (chặn hoàn toàn, trả 401 `AUTH_EMAIL_NOT_VERIFIED`) chỉ còn ý nghĩa lịch sử, giữ lại code (`EmailNotVerifiedException`) cho khi bật lại xác thực email thật. `AuthService.login()` kiểm tra `status` thủ công trước khi cấp token (không dùng `AuthenticationManager`/`isEnabled()`).
 
 ### 1.3 Đăng xuất (Logout)
 
@@ -61,18 +63,20 @@
 - Token dùng 1 lần — dùng lại phải bị từ chối.
 - Sau khi reset thành công, tất cả Refresh Token cũ của user nên bị revoke (bảo mật — buộc đăng nhập lại trên mọi thiết bị).
 
-### 1.6 Xác thực Email (Email Verification)
+### 1.6 Xác thực Email (Email Verification) — hạ tầng còn giữ, KHÔNG còn dùng qua flow chuẩn (xem mục 1.1)
 
 **API liên quan:** `GET /api/auth/verify-email` (public, kèm token qua query param)
 
 **Main flow:** Người dùng bấm link trong email → token hợp lệ → `User.status` chuyển từ `PENDING_VERIFICATION` sang `ACTIVE`.
 **Exception flow:** Token hết hạn/không hợp lệ/đã dùng → thông báo lỗi rõ ràng, có tuỳ chọn gửi lại email xác thực (nếu có tính năng resend).
 
+> Register không còn tạo `VerificationToken` type `EMAIL_VERIFY` (2026-08-06) nên endpoint này không còn được gọi tới qua luồng chuẩn nữa — chỉ test được nếu tự seed thủ công 1 `VerificationToken` type `EMAIL_VERIFY` trong DB. Giữ nguyên code để bật lại khi tích hợp gửi email thật.
+
 ## Phần 2 — Test Scenarios
 
 1. Đăng ký thành công với dữ liệu hợp lệ.
 2. Đăng ký thất bại với dữ liệu không hợp lệ (thiếu field, sai định dạng, trùng username/email, password không khớp).
-3. Đăng nhập thành công/thất bại theo từng trạng thái tài khoản (ACTIVE/DISABLED/LOCKED/PENDING_VERIFICATION).
+3. Đăng nhập thành công/thất bại theo từng trạng thái tài khoản (ACTIVE/DISABLED/LOCKED — PENDING_VERIFICATION không còn là trạng thái chặn, xử lý như ACTIVE, xem mục 1.1).
 4. Đăng xuất và xác nhận token cũ không dùng lại được.
 5. Refresh Token thành công/thất bại (hết hạn, revoked).
 6. Quên mật khẩu → đặt lại mật khẩu → đăng nhập bằng mật khẩu mới thành công, mật khẩu cũ thất bại.
@@ -83,11 +87,11 @@
 
 ## Phần 3 — Test Cases chi tiết
 
-> **Trạng thái implement (2026-07-31):** Toàn bộ 7 endpoint Auth (`register`, `login`, `refresh-token`, `logout`, `forgot-password`, `reset-password`, `verify-email`) **đã implement** từ Giai đoạn 2 và **đã test được** — bao gồm rule trạng thái tài khoản (PENDING_VERIFICATION/DISABLED/LOCKED đều trả 401), password strength, revoke toàn bộ RefreshToken sau reset-password, ownership check khi logout (không revoke token của user khác, âm thầm bỏ qua). **Không áp dụng/chưa implement**: Rate-limit/chống brute-force đăng nhập (mục Phần 2 điểm 10) — chưa có cơ chế giới hạn số lần thử sai (không tìm thấy rate-limiter nào trong `auth/` package), ghi nhận là gap thật, chưa có kế hoạch cụ thể ở roadmap hiện tại.
+> **Trạng thái implement (2026-07-31, cập nhật 2026-08-06):** Toàn bộ 7 endpoint Auth (`register`, `login`, `refresh-token`, `logout`, `forgot-password`, `reset-password`, `verify-email`) **đã implement** từ Giai đoạn 2 và **đã test được** — bao gồm rule trạng thái tài khoản (DISABLED/LOCKED trả 401), password strength, revoke toàn bộ RefreshToken sau reset-password, ownership check khi logout (không revoke token của user khác, âm thầm bỏ qua). **2026-08-06: tắt bước xác thực email sau đăng ký** (xem mục 1.1) — `register` trả `status=ACTIVE` ngay, `login` không còn chặn `PENDING_VERIFICATION`; các TC-AUTH-001/013/026/027/034 bên dưới đã cập nhật lại theo quyết định này. **Không áp dụng/chưa implement**: Rate-limit/chống brute-force đăng nhập (mục Phần 2 điểm 10) — chưa có cơ chế giới hạn số lần thử sai (không tìm thấy rate-limiter nào trong `auth/` package), ghi nhận là gap thật, chưa có kế hoạch cụ thể ở roadmap hiện tại.
 
 | ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
 |---|---|---|---|---|---|---|
-| TC-AUTH-001 | Đăng ký thành công | Chưa có tài khoản trùng | 1. Gọi `POST /api/auth/register` với dữ liệu hợp lệ | username=`newuser01`, email hợp lệ chưa tồn tại, password=`Passw0rd1`, confirm khớp | 200, `code=200`, User được tạo với status PENDING_VERIFICATION (đã chốt), không có password trong response | Critical |
+| TC-AUTH-001 | Đăng ký thành công | Chưa có tài khoản trùng | 1. Gọi `POST /api/auth/register` với dữ liệu hợp lệ | username=`newuser01`, email hợp lệ chưa tồn tại, password=`Passw0rd1`, confirm khớp | 200, `code=200`, User được tạo với status ACTIVE (đã đổi quyết định 2026-08-06, xem mục 1.1 — trước đó là PENDING_VERIFICATION), không có password trong response, đăng nhập được ngay không cần xác thực email | Critical |
 | TC-AUTH-002 | Đăng ký thất bại — username đã tồn tại | Đã có `user01` (xem `09_TEST_DATA.md`) | Đăng ký với username=`user01` | username=`user01` | 409, errorCode `AUTH_USERNAME_TAKEN`, message rõ ràng "username đã tồn tại", không tạo user mới | High |
 | TC-AUTH-003 | Đăng ký thất bại — email đã tồn tại | user01@test.com đã tồn tại | Đăng ký với email=`user01@test.com` | email trùng | 409, errorCode `AUTH_EMAIL_TAKEN` | High |
 | TC-AUTH-004 | Đăng ký thất bại — email sai định dạng | — | Nhập email=`abc123` | email không hợp lệ | 400 validate error, field `email` | Medium |
@@ -99,7 +103,7 @@
 | TC-AUTH-010 | Đăng nhập thất bại — username không tồn tại | — | username lạ | `khong_ton_tai` | 401, message giống hệt TC-AUTH-009 (không phân biệt được) | High |
 | TC-AUTH-011 | Đăng nhập thất bại — tài khoản DISABLED | Dùng `user04_disabled` | Login đúng password | user04_disabled | 401, errorCode `AUTH_ACCOUNT_DISABLED`, message rõ "tài khoản bị vô hiệu hoá" | High |
 | TC-AUTH-012 | Đăng nhập thất bại — tài khoản LOCKED | Dùng `user05_locked` | Login đúng password | user05_locked | 401, errorCode `AUTH_ACCOUNT_LOCKED`, message rõ "tài khoản bị khoá" | High |
-| TC-AUTH-013 | Đăng nhập — tài khoản PENDING_VERIFICATION | Dùng `user03_pending` | Login | user03_pending | Bị chặn đăng nhập hoàn toàn (đã chốt, xem mục 1.2) — 401, errorCode `AUTH_EMAIL_NOT_VERIFIED` | Medium |
+| TC-AUTH-013 | Đăng nhập — tài khoản PENDING_VERIFICATION (row cũ, seed thủ công) | User seed thủ công status=PENDING_VERIFICATION (đăng ký chuẩn từ 2026-08-06 không còn tạo status này) | Login | user03_pending | **Đã đổi quyết định (2026-08-06, xem mục 1.2)** — KHÔNG còn bị chặn, xử lý như ACTIVE, 200 trả token bình thường | Medium |
 | TC-AUTH-014 | Đăng xuất thành công | Đã login, có accessToken/refreshToken | `POST /api/auth/logout` kèm `Authorization: Bearer <accessToken>` | | 200, refreshToken (theo cookie) bị revoke trong DB, response `Set-Cookie` xoá cookie (Max-Age=0) | High |
 | TC-AUTH-015 | Dùng lại Refresh Token đã logout | Sau TC-AUTH-014 | `POST /api/auth/refresh-token` với cookie refreshToken cũ | | 401, errorCode `AUTH_TOKEN_INVALID` | Critical |
 | TC-AUTH-016 | Refresh Token thành công | AccessToken hết hạn, RefreshToken còn hạn | `POST /api/auth/refresh-token` (đọc cookie) | | 200, trả `accessToken` mới trong JSON body (không rotate refreshToken) | Critical |
@@ -112,15 +116,15 @@
 | TC-AUTH-023 | Đăng nhập bằng mật khẩu mới sau khi reset | Sau TC-AUTH-021 | Login bằng password mới | | 200 | Critical |
 | TC-AUTH-024 | Dùng lại token reset đã dùng | Sau TC-AUTH-021, dùng lại cùng token | `POST /api/auth/reset-password` lần 2 | token đã used | 400, errorCode `AUTH_TOKEN_ALREADY_USED`, "token đã được sử dụng hoặc hết hạn" | Critical |
 | TC-AUTH-025 | Đặt lại mật khẩu — token hết hạn | Token quá thời gian hiệu lực | `POST /api/auth/reset-password` | | 401, errorCode `AUTH_TOKEN_EXPIRED` | High |
-| TC-AUTH-026 | Xác thực email thành công | User PENDING_VERIFICATION có token EMAIL_VERIFY hợp lệ | `GET /api/auth/verify-email?token=...` | | 200, `User.status` chuyển ACTIVE, token `usedAt` được set | High |
-| TC-AUTH-027 | Xác thực email — token hết hạn | | `GET /api/auth/verify-email` với token hết hạn | | 401, errorCode `AUTH_TOKEN_EXPIRED`, status User không đổi | Medium |
+| TC-AUTH-026 | Xác thực email thành công (hạ tầng còn giữ, không còn tới qua register chuẩn — xem mục 1.6) | User + token EMAIL_VERIFY seed thủ công trong DB | `GET /api/auth/verify-email?token=...` | | 200, `User.status` chuyển ACTIVE, token `usedAt` được set | Low |
+| TC-AUTH-027 | Xác thực email — token hết hạn (hạ tầng còn giữ, xem mục 1.6) | Token EMAIL_VERIFY seed thủ công, hết hạn | `GET /api/auth/verify-email` với token hết hạn | | 401, errorCode `AUTH_TOKEN_EXPIRED`, status User không đổi | Low |
 | TC-AUTH-028 | Kiểm tra response Login không lộ password/hash/refreshToken qua JSON | Sau TC-AUTH-008 | Xem toàn bộ JSON response (Network tab, không phải header) | | Không có field `password`/`passwordHash`/`refreshToken` ở bất kỳ đâu trong JSON body — `refreshToken` chỉ nằm trong header `Set-Cookie` (`httpOnly`), JS phía FE không đọc được | Critical |
 | TC-AUTH-029 | Đăng ký — SQL Injection cơ bản trong field text | — | Nhập username=`' OR '1'='1` | | Không gây lỗi 500, không đăng nhập được bằng chuỗi đó, dữ liệu được xử lý như chuỗi thường (ORM tham số hoá) | Critical |
 | TC-AUTH-030 | Gọi API protected không có token | Chưa login | Gọi bất kỳ API protected nào không kèm Authorization header | | 401 Unauthorized | Critical |
 | TC-AUTH-031 | Refresh Token — thiếu cookie hoàn toàn | Chưa login, không có cookie | `POST /api/auth/refresh-token` không kèm cookie | | 401, errorCode `AUTH_TOKEN_INVALID` (đã fix bug thật: trước đây ném `NullPointerException` → 500) | Critical |
 | TC-AUTH-032 | Đặt lại mật khẩu — confirmNewPassword không khớp newPassword | Có token PASSWORD_RESET hợp lệ | `POST /api/auth/reset-password` | newPassword≠confirmNewPassword | 400, errorCode `AUTH_PASSWORD_MISMATCH` | Medium |
 | TC-AUTH-033 | Đặt lại mật khẩu — token không tồn tại/sai định dạng | — | `POST /api/auth/reset-password` | token ngẫu nhiên | 401, errorCode `AUTH_TOKEN_INVALID` | Medium |
-| TC-AUTH-034 | Xác thực email — token đã dùng | Sau TC-AUTH-026, dùng lại cùng token | `GET /api/auth/verify-email` lần 2 | | 400, errorCode `AUTH_TOKEN_ALREADY_USED` | Medium |
+| TC-AUTH-034 | Xác thực email — token đã dùng (hạ tầng còn giữ, xem mục 1.6) | Sau TC-AUTH-026, dùng lại cùng token | `GET /api/auth/verify-email` lần 2 | | 400, errorCode `AUTH_TOKEN_ALREADY_USED` | Low |
 | TC-AUTH-035 | Đăng xuất — ownership check khi cookie refreshToken thuộc user khác | Login bằng 2 tài khoản khác nhau trên 2 client | `POST /api/auth/logout` với accessToken của user A nhưng cookie refreshToken của user B | | 200 (không lộ lỗi, không revoke), server tự bỏ qua vì token không thuộc currentUserId — kiểm tra DB: refreshToken của user B vẫn `revoked=false` | High |
 
 **Ghi chú:** Bổ sung Test Case cho rate-limit đăng nhập sai nhiều lần liên tiếp nếu tính năng này được triển khai (hiện `docs/PROJECT_OVERVIEW.md` chỉ liệt kê "Rate Limiting nếu cần" — xác nhận với dev trước khi viết case chi tiết).
