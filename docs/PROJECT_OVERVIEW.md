@@ -567,19 +567,35 @@ Message/errorCode không hardcode trực tiếp trong các class trên — lấy
 src/
 ├── api/            (axiosClient.ts, tokenStore.ts, apiError.ts)
 ├── assets/
-├── components/     (components/common/Navbar.tsx, components/vocabulary, components/deck...)
-├── contexts/        (AuthContext.tsx ✅, ThemeContext)
-├── hooks/           (useDebounce, usePagination — useAuthContext nằm ngay trong AuthContext.tsx theo convention mục 2.1)
-├── layouts/         (PublicLayout ✅, UserLayout ✅, AdminLayout)
-├── pages/           (pages/auth/{LoginPage,RegisterPage,ForgotPasswordPage,ResetPasswordPage,VerifyEmailPage}.tsx ✅, DashboardPage.tsx ✅ placeholder, ProfilePage.tsx ✅, pages/courses/{CourseListPage,CourseDetailPage}.tsx ✅)
+├── components/
+│   ├── ui/          (Design System atoms ✅ — Button, ButtonLink, Input, Card, Spinner, index.ts barrel)
+│   └── common/       (Navbar.tsx ✅, Logo.tsx ✅, ThemeToggle.tsx ✅, components/vocabulary, components/deck...)
+├── contexts/        (AuthContext.tsx ✅, ThemeContext.tsx ✅)
+├── hooks/           (useDebounce, usePagination — useAuthContext/useThemeContext nằm ngay trong Context tương ứng theo convention mục 2.1)
+├── layouts/         (PublicLayout ✅, AuthLayout ✅, UserLayout ✅, AdminLayout)
+├── pages/           (pages/auth/{LoginPage,RegisterPage,ForgotPasswordPage,ResetPasswordPage,VerifyEmailPage}.tsx ✅ — đã redesign theo Design System 2026-08-06, pages/auth/AuthForm.module.scss dùng chung, DashboardPage.tsx ✅ placeholder — chưa redesign, ProfilePage.tsx ✅ — chưa redesign, pages/courses/{CourseListPage,CourseDetailPage}.tsx ✅ — chưa redesign)
 ├── routes/           (AppRoutes.tsx ✅, PublicRoute.tsx ✅, ProtectedRoute.tsx ✅, AdminRoute)
 ├── services/         (authService.ts ✅, userService.ts ✅ đủ 3 method /api/users/me, courseService.ts ✅, languageService.ts ✅...)
 ├── types/            (api.ts ✅, auth.ts ✅, user.ts ✅ — khớp 1-1 Response/Request DTO backend)
 ├── constants/
-└── styles/
+└── styles/          (_variables.scss ✅, _theme.scss ✅, _bootstrap.scss ✅, global.scss ✅ — xem mục 8.1)
 ```
 
 **Đã implement (Giai đoạn 2):** Access token lưu in-memory (`api/tokenStore.ts`, module-level variable — không phải React state, vì `axiosClient`'s interceptor chạy ngoài component tree không dùng hook được), **không** localStorage. Refresh token là httpOnly cookie do backend set (`POST /api/auth/login`, xem mục 9) — `axiosClient` bật `withCredentials: true` để trình duyệt gửi kèm cookie, origin FE khớp `FRONTEND_URL` backend cấu hình (`CorsConfig`). Axios response interceptor: 401 (trừ chính các endpoint `/api/auth/**`, tránh vòng lặp refresh vô hạn) → gọi `POST /api/auth/refresh-token` 1 lần (gom các request 401 đồng thời lại tránh gọi refresh nhiều lần song song) → thành công thì set lại token + replay request gốc, thất bại thì `notifyAuthFailure()` cho `AuthContext` biết để clear `user` (không tự điều hướng cứng trong `axiosClient` — `ProtectedRoute` tự redirect khi thấy `user === null`). `AuthContext` khi app khởi động cũng tự gọi `refresh-token` 1 lần để khôi phục phiên đăng nhập sau khi reload trang (vì accessToken in-memory bị mất khi reload). Dùng `react-hook-form` cho Login/Register form theo đúng mục 2.2.
+
+### 8.1 Design System (bắt đầu 2026-08-06)
+
+Người dùng yêu cầu redesign toàn bộ Frontend đạt chất lượng sản phẩm thương mại (tham khảo phong cách Duolingo/Quizlet/Apple/Linear, không dùng UI library có sẵn — tự thiết kế). Quyết định kiến trúc đã chốt, áp dụng nhất quán cho mọi màn hình sau này:
+
+- **Styling: SCSS + CSS Modules**, KHÔNG dùng Tailwind/MUI/AntD. Mỗi component `ui`/`common` có 1 file `*.module.scss` riêng.
+- **Bootstrap 5 vẫn giữ** (đúng CLAUDE.md) nhưng chỉ lấy phần grid (`container/row/col`) + CSS reset (`reboot`) + utility class chọn lọc (flex/spacing/gap/text) qua `src/styles/_bootstrap.scss` — **cố tình không import component CSS** (`.btn`/`.card`/`.form-control`/`.navbar`...) để tránh giao diện lộ "trông giống Bootstrap mặc định". Toàn bộ component tương tác (Button/Input/Card...) tự thiết kế riêng trong `components/ui/`.
+- **Design Tokens** (`src/styles/_variables.scss` — spacing/radius/typography/shadow-shape/transition không đổi theo theme; `src/styles/_theme.scss` — màu sắc dạng CSS custom property `--dl-*`, đổi được runtime theo `[data-bs-theme]`). Bảng màu: primary xanh lá emerald (tinh thần Duolingo/growth), secondary chàm indigo (Linear/Quizlet), accent vàng hổ phách (gamification: streak/XP). Font: Inter (nạp qua Google Fonts trong `index.html`).
+- **Dark mode**: dùng chung attribute `data-bs-theme` trên `<html>` cho cả token `--dl-*` của mình lẫn `--bs-*` của Bootstrap — 1 lần toggle áp dụng toàn bộ. `ThemeContext` (`contexts/ThemeContext.tsx`) quản lý state + persist `localStorage`; set attribute ngay trong `<script>` inline ở `index.html` (chạy trước khi React mount) để tránh FOUC (nháy sai theme lúc tải trang).
+- **Icon**: `lucide-react` (icon set, không phải UI library nên không vi phạm yêu cầu "không dùng thư viện UI có sẵn") — dùng đồng bộ toàn site, không trộn nhiều bộ icon.
+- **Component Library** (`components/ui/`, export qua `index.ts` barrel): `Button` (5 variant, 3 size, ripple effect tự vẽ bằng JS + CSS animation, loading spinner tích hợp), `ButtonLink` (React Router `Link` nhìn giống `Button` — dùng khi hành động là điều hướng, không submit), `Input` (forwardRef tương thích `react-hook-form`, có label/error/hint, password field tự có nút hiện/ẩn), `Card` (hoverable + padding variant), `Spinner`. Mở rộng dần theo nhu cầu từng màn hình, không xây trước toàn bộ danh sách component khi chưa có nơi dùng.
+- **Layout mới**: `AuthLayout` (split-screen 2 cột — panel trái gradient primary→secondary kèm blob glass effect + value proposition, panel phải form; responsive: panel trái ẩn dưới `lg`) dùng cho toàn bộ luồng Auth (Login/Register/ForgotPassword/ResetPassword/VerifyEmail), thay cho `PublicLayout` + `Navbar` mặc định trước đó.
+- **Quyết định phạm vi**: redesign lại cả trang đã có sẵn (không chỉ trang mới) để tránh giao diện nửa cũ nửa mới — đã làm xong Auth, còn Dashboard/Course List/Course Detail/Profile vẫn đang ở giao diện Bootstrap cũ, sẽ redesign lần lượt theo đúng thứ tự đã thống nhất: Dashboard → Course List → Course Detail → Lesson → Vocabulary Learning → Flashcard → Quiz → Review → Profile → Admin Dashboard → Landing Page (làm sau cùng).
+- Nhiều màn hình được yêu cầu (Achievement, Leaderboard, Pricing, Speaking Practice, Admin Achievement/Notification management, Study Statistics nâng cao...) tương ứng tính năng Backend thuộc Phase 2/chưa xây (xem mục 11) — sẽ code UI bằng mock data theo đúng yêu cầu, chưa "sống" bằng dữ liệu thật cho tới khi Backend triển khai.
 
 ---
 

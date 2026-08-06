@@ -66,6 +66,7 @@
 - Component không tự gọi `axios` trực tiếp — luôn qua lớp `services/`.
 - State toàn cục dùng Context API (`AuthContext`, `ThemeContext`) — chỉ cân nhắc state management library ngoài (Zustand/Redux) nếu Context thực sự không đáp ứng được (ghi rõ lý do vào đây nếu đổi).
 - Form dùng `react-hook-form` nhất quán cho mọi form nhập liệu (không tự quản lý state form bằng `useState` rời rạc).
+- **Styling (chốt 2026-08-06, Design System):** SCSS + CSS Modules (`*.module.scss` đi kèm mỗi component), không dùng Tailwind/MUI/AntD. Bootstrap 5 chỉ dùng phần grid + reboot + utility chọn lọc qua `src/styles/_bootstrap.scss` (không lấy CSS component `.btn`/`.card`/`.form-control`...) — mọi component tương tác tự thiết kế riêng trong `components/ui/`. Màu sắc dùng CSS custom property `--dl-*` (`src/styles/_theme.scss`, đổi runtime theo `[data-bs-theme]` cho dark mode); spacing/radius/typography/shadow-shape dùng SCSS variable (`src/styles/_variables.scss`, không đổi theo theme). Icon dùng `lucide-react` đồng bộ toàn site. Chi tiết đầy đủ: `docs/PROJECT_OVERVIEW.md` mục 8.1.
 
 ### 2.3 ESLint
 
