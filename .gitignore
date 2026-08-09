@@ -3,3 +3,6 @@ language-learning-backend/
 language-learning-client/
 
 .DS_Store
+
+# Log runtime của start-demo.sh - không commit
+.demo-logs/
