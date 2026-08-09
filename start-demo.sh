@@ -36,9 +36,33 @@ if ! nc -z localhost 3306 2>/dev/null; then
 fi
 echo "    OK."
 
+echo "==> Mở Cloudflare Tunnel (mở trước Backend để lấy URL, dùng cấu hình CORS)..."
+nohup cloudflared tunnel --url http://localhost:5173 > "$LOG_DIR/tunnel.log" 2>&1 &
+TUNNEL_PID=$!
+echo "$TUNNEL_PID" >> "$PID_FILE"
+
+URL=""
+for i in $(seq 1 30); do
+    URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' "$LOG_DIR/tunnel.log" 2>/dev/null | head -1)
+    if [ -n "$URL" ]; then
+        break
+    fi
+    sleep 1
+done
+
+if [ -z "$URL" ]; then
+    echo "    Không lấy được link tunnel. Xem log: $LOG_DIR/tunnel.log"
+    exit 1
+fi
+echo "    URL: $URL"
+
 echo "==> Khởi động Backend (port 8080)..."
 cd "$BACKEND_DIR"
-COOKIE_SECURE=true nohup ./mvnw spring-boot:run > "$LOG_DIR/backend.log" 2>&1 &
+# FRONTEND_URL = URL tunnel vừa lấy - bắt buộc để CORS (app.cors.allowed-origin) chấp nhận đúng
+# origin trình duyệt gửi lên. Vite proxy giúp browser thấy 1 origin, nhưng Spring vẫn tự kiểm tra
+# header Origin ở server bất kể proxy - nếu để mặc định localhost:5173 sẽ bị chặn 403 khi người
+# ngoài truy cập qua URL tunnel.
+COOKIE_SECURE=true FRONTEND_URL="$URL" nohup ./mvnw spring-boot:run > "$LOG_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
 echo "$BACKEND_PID" >> "$PID_FILE"
 cd "$ROOT_DIR"
@@ -81,25 +105,6 @@ for i in $(seq 1 30); do
     fi
     sleep 1
 done
-
-echo "==> Mở Cloudflare Tunnel..."
-nohup cloudflared tunnel --url http://localhost:5173 > "$LOG_DIR/tunnel.log" 2>&1 &
-TUNNEL_PID=$!
-echo "$TUNNEL_PID" >> "$PID_FILE"
-
-URL=""
-for i in $(seq 1 30); do
-    URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' "$LOG_DIR/tunnel.log" 2>/dev/null | head -1)
-    if [ -n "$URL" ]; then
-        break
-    fi
-    sleep 1
-done
-
-if [ -z "$URL" ]; then
-    echo "    Không lấy được link tunnel. Xem log: $LOG_DIR/tunnel.log"
-    exit 1
-fi
 
 echo ""
 echo "================================================================"
