@@ -22,6 +22,12 @@ if [ -x "$ROOT_DIR/stop-demo.sh" ] && (lsof -ti:8080 >/dev/null 2>&1 || lsof -ti
     sleep 1
 fi
 
+echo "==> Bật caffeinate (chống máy sleep khi cắm sạc)..."
+caffeinate -s &
+CAFFEINATE_PID=$!
+echo "$CAFFEINATE_PID" >> "$PID_FILE"
+echo "    OK. Lưu ý: chỉ chống sleep khi KHÔNG gập nắp máy - gập nắp vẫn sleep trừ khi bật clamshell mode (cắm sạc + có màn hình ngoài hoặc chuột/bàn phím rời)."
+
 echo "==> Kiểm tra MySQL (port 3306)..."
 if ! nc -z localhost 3306 2>/dev/null; then
     echo "    MySQL chưa chạy, đang khởi động..."

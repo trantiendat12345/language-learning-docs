@@ -7,6 +7,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="$ROOT_DIR/.demo-logs"
 PID_FILE="$LOG_DIR/pids"
 
+echo "==> Tắt caffeinate..."
+pkill -f "caffeinate -s" 2>/dev/null && echo "    Đã dừng." || echo "    Không có tiến trình nào đang chạy."
+
 echo "==> Dừng Cloudflare Tunnel..."
 pkill -f "cloudflared tunnel --url" 2>/dev/null && echo "    Đã dừng." || echo "    Không có tiến trình nào đang chạy."
 
