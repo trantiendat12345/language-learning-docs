@@ -99,6 +99,14 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 | `BAD_REQUEST` (dùng chung message riêng `ErrorMessage.LESSON_VOCABULARY_ARCHIVED`) | 400 | TC-ADMIN-LESSON-VOCAB-013 (2026-10-17) — gắn Vocabulary hệ thống `ARCHIVED` vào Lesson. Dùng 400 (không ẩn bằng 404) vì Admin vẫn thấy từ ARCHIVED ở màn quản trị. Cùng message này là lỗi dòng khi Import vào Lesson gặp từ chỉ còn bản ARCHIVED (TC-ADMIN-LESSON-VOCAB-014) |
 | `DUPLICATE_RESOURCE` (dùng chung message riêng `ErrorMessage.LESSON_VOCABULARY_ALREADY_ATTACHED`) | 409 | Gắn trùng 1 từ vào cùng Lesson (đã có từ Chunk B Admin, nay message chuyển vào `ErrorMessage`) |
 
+### Vocabulary hệ thống — chống trùng + từ đang được Lesson dùng (2026-10-17)
+
+| `errorCode` | HTTP `code` | Test Case liên quan |
+|---|---|---|
+| `DUPLICATE_RESOURCE` (dùng chung, message riêng `ErrorMessage.VOCABULARY_DUPLICATE_IN_SYSTEM` / `VOCABULARY_DUPLICATE_ARCHIVED`, có kèm Word + id bản trùng) | 409 | TC-ADMIN-VOCAB-DUP-001 → 005 — `POST/PUT /api/admin/vocabularies` trùng Word + ngôn ngữ trong kho hệ thống (bỏ qua hoa/thường, phân biệt dấu, sau trim). Cùng message là lỗi dòng của Admin Import. Race 2 request đồng thời: unique index `uk_vocabulary_system_word_key` → `DataIntegrityViolationException` → 409 `DUPLICATE_RESOURCE` message chung "Dữ liệu đã tồn tại" (handler có sẵn) |
+| `VOCABULARY_ARCHIVE_CONFIRMATION_REQUIRED` | 409 | TC-ADMIN-VOCAB-USE-001 — `PUT /api/admin/vocabularies/{id}` chuyển ARCHIVED 1 từ đang được Lesson dùng mà chưa có `confirmArchiveInUse=true`; message liệt kê Lesson bị ảnh hưởng. FE đọc errorCode này để hỏi xác nhận rồi gửi lại (`VocabularyArchiveConfirmationRequiredException`) |
+| `VOCABULARY_LANGUAGE_CHANGE_IN_USE` | 409 | TC-ADMIN-VOCAB-USE-003 — đổi ngôn ngữ của từ đang được Lesson dùng: luôn chặn, không có cờ xác nhận (`VocabularyLanguageChangeInUseException`) |
+
 ### Import CSV/Excel (Vocabulary hệ thống + Deck Card + Lesson Vocabulary — không dùng errorCode riêng)
 
 | `errorCode` | HTTP `code` | Test Case liên quan |

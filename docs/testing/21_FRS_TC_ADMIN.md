@@ -135,3 +135,26 @@ Toàn bộ endpoint `/api/admin/**` áp dụng chung các quy tắc sau (áp d�
 | TC-ADMIN-LESSON-VOCAB-016 | Cảnh báo + lỗi cùng lúc vẫn all-or-nothing | | Import file có 1 dòng khác nghĩa + 1 dòng thiếu Meaning | `success=false`, trả cả lỗi lẫn cảnh báo, không lưu dòng nào | Medium |
 | TC-ADMIN-LESSON-VOCAB-017 | Khác hoa/thường hoặc khoảng trắng không coi là khác nghĩa | "apple" meaning "quả táo" | Import "apple,  Quả   TÁO " | Không có cảnh báo | Low |
 | TC-ADMIN-VOCAB-IMPORT-001 | Admin Import vào kho: trùng từ ARCHIVED vẫn là lỗi duplicate | "oldword" ARCHIVED trong kho hệ thống | `/admin/vocabularies` Import "oldword" | Lỗi dòng "Word đã tồn tại trong kho hệ thống", không tạo bản mới, không tự kích hoạt lại; không có cảnh báo khác nghĩa ở luồng này | High |
+
+### 3.6 Toàn vẹn dữ liệu Vocabulary hệ thống (bổ sung 2026-10-17)
+
+**Quy tắc:** Từ hệ thống (`ownerId` null) là duy nhất theo Word + ngôn ngữ — Word được trim + chuẩn hoá NFC, so sánh **bỏ qua hoa/thường, phân biệt dấu/kana**. Ràng buộc ở cả Service (message rõ ràng) lẫn DB (unique index `uk_vocabulary_system_word_key`). Từ đang được Lesson dùng: không đổi được ngôn ngữ; lưu trữ cần xác nhận. Học viên chỉ thấy từ hợp lệ; Admin thấy đủ kèm cảnh báo; liên kết `lesson_vocabulary` không bị xoá/sửa.
+
+> **Trạng thái implement (2026-10-17):** code + Unit Test (`VocabularyServiceImplTest`, `LessonServiceImplTest`, `VocabularyWordMatcherTest`), schema đã áp + xác minh trên MariaDB local — chưa chạy thủ công bằng tài khoản Admin thật.
+
+| ID | Tiêu đề | Precondition | Steps | Expected Result | Priority |
+|---|---|---|---|---|---|
+| TC-ADMIN-VOCAB-DUP-001 | Tạo từ mới hợp lệ | "orange" chưa có trong kho EN | `POST /api/admin/vocabularies` word="orange" | 200, tạo từ `ownerId` null | High |
+| TC-ADMIN-VOCAB-DUP-002 | Tạo trùng cùng ngôn ngữ (khác hoa/thường) | "apple" ACTIVE trong kho EN | Tạo word="Apple" (EN) | 409, message "Từ "apple" đã tồn tại trong kho hệ thống của ngôn ngữ này (id=...)", không tạo bản ghi | Critical |
+| TC-ADMIN-VOCAB-DUP-003 | Cùng Word ở ngôn ngữ khác | "apple" có trong EN | Tạo word="apple" với ngôn ngữ JA | 200, tạo được | Medium |
+| TC-ADMIN-VOCAB-DUP-004 | Trùng với bản ARCHIVED | "oldword" ARCHIVED trong EN | Tạo word="oldword" (EN) | 409, message nói rõ bản trùng đang Lưu trữ (kèm id) để Admin xem lại; không tạo mới, bản cũ vẫn ARCHIVED | High |
+| TC-ADMIN-VOCAB-DUP-005 | Word có khoảng trắng đầu/cuối | "apple" có trong EN | Tạo word="  apple  " | 409 trùng; nếu chưa có thì lưu "apple" (đã trim) | High |
+| TC-ADMIN-VOCAB-DUP-006 | Chỉ khác dấu không phải trùng | "ban" có trong kho | Tạo "bạn" cùng ngôn ngữ | 200, tạo được (phân biệt dấu) | Medium |
+| TC-ADMIN-VOCAB-DUP-007 | Sửa Word thành từ đã có | "apple", "orange" cùng EN | `PUT` đổi "orange" → "Apple" | 409 trùng, "orange" không đổi | High |
+| TC-ADMIN-VOCAB-DUP-008 | 2 yêu cầu tạo đồng thời | Có quyền ghi DB test | Gửi song song 2 `POST` cùng Word + ngôn ngữ | Chỉ 1 bản ghi được tạo, request còn lại 409 (unique index DB) | High |
+| TC-ADMIN-VOCAB-USE-001 | Lưu trữ từ đang được Lesson dùng — chưa xác nhận | "apple" gắn trong Lesson A | `PUT` status=ARCHIVED, không có `confirmArchiveInUse` | 409 `VOCABULARY_ARCHIVE_CONFIRMATION_REQUIRED`, message liệt kê Lesson A; từ vẫn ACTIVE | Critical |
+| TC-ADMIN-VOCAB-USE-002 | Lưu trữ từ đang được Lesson dùng — đã xác nhận | Như trên | Giao diện: bấm Lưu → hộp xác nhận → OK | 200, từ ARCHIVED; liên kết với Lesson A vẫn còn trong DB | Critical |
+| TC-ADMIN-VOCAB-USE-003 | Đổi ngôn ngữ từ đang được Lesson dùng | "apple" gắn trong Lesson A | `PUT` languageId khác (kể cả gửi `confirmArchiveInUse=true`) | 409 `VOCABULARY_LANGUAGE_CHANGE_IN_USE`, ngôn ngữ không đổi | Critical |
+| TC-ADMIN-VOCAB-USE-004 | Học viên không thấy từ không hợp lệ | Lesson A có 1 từ hợp lệ + 1 từ đã ARCHIVED (sau TC-002) | Học viên đã ghi danh mở Lesson A / trang Học từ vựng | Chỉ thấy từ hợp lệ, học bình thường | Critical |
+| TC-ADMIN-VOCAB-USE-005 | Admin thấy liên kết không hợp lệ kèm cảnh báo | Như trên | Admin mở `/admin/lessons/{A}` | Từ ARCHIVED vẫn hiện, có nhãn "Đã lưu trữ — học viên không thấy" + dòng nhắc gỡ/khôi phục | High |
+| TC-ADMIN-VOCAB-USE-006 | Liên kết cũ không bị xoá | Sau TC-002 | Kiểm tra DB `lesson_vocabulary` | Dòng liên kết vẫn còn, không đổi `display_order` | High |

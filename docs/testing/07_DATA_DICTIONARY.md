@@ -91,7 +91,7 @@
 |---|---|---|---|
 | languageId | bigint FK | ✅ | |
 | ownerId | bigint FK User | ❌ | Null = từ hệ thống (Admin); có giá trị = từ custom của User |
-| word | varchar(200) | ✅ | |
+| word | varchar(200) | ✅ | Trim + chuẩn hoá Unicode NFC trước khi lưu (2026-10-17). Từ hệ thống (`ownerId` null) là duy nhất theo Word + Language: không phân biệt hoa/thường, phân biệt dấu/kana (Apple = apple; ban ≠ bạn; かき ≠ かぎ) — kể cả khi bản cũ đang ARCHIVED |
 | meaning | varchar(500) | ✅ | Tiếng Việt (MVP — xem quy tắc mục 8, `04_BUSINESS_RULES_GLOBAL.md`) |
 | ipa | varchar(100) | ❌ | |
 | pronunciationAudioUrl | varchar(500) | ❌ | |
@@ -101,12 +101,14 @@
 | exampleSentence / exampleTranslation | text | ❌ | |
 | frequencyRank | int | ❌ | Độ phổ biến của từ, dùng cho gợi ý học |
 | status | enum | ✅ | `ACTIVE`/`ARCHIVED` |
+| systemWordKey (`system_word_key`) | varchar(230), cột sinh STORED | ❌ | Do DB tự tính, chỉ đọc: `languageId:lower(word)` khi từ hệ thống chưa xoá mềm, ngược lại NULL. Unique index `uk_vocabulary_system_word_key` — bảo đảm không trùng ở mức DB (2026-10-17) |
 
 ### LessonVocabulary (join)
 | Field | Ghi chú |
 |---|---|
 | lessonId, vocabularyId | Composite unique — 1 từ chỉ xuất hiện 1 lần trong 1 Lesson |
 | displayOrder | Thứ tự hiển thị trong Lesson |
+| *(không lưu)* issue | Chỉ có trong response API Admin (2026-10-17): `ARCHIVED`/`LANGUAGE_MISMATCH`/`NOT_SYSTEM_WORD`/`DELETED` khi Vocabulary bị thay đổi sau khi gắn. Liên kết vẫn giữ trong DB; API học viên ẩn các từ này |
 
 ### Grammar / GrammarExample
 | Entity | Field chính | Ghi chú |

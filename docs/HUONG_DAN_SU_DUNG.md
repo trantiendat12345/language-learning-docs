@@ -223,9 +223,17 @@ Số liệu tổng quan toàn hệ thống: tổng số người dùng, số ng�
 - Thao tác trạng thái tài khoản: **Vô hiệu hoá**, **Khoá**, hoặc **Kích hoạt lại** — người dùng bị vô hiệu hoá/khoá sẽ bị đăng xuất ngay lập tức và không đăng nhập lại được cho tới khi Admin kích hoạt lại.
 - Vì lý do an toàn, Admin **không thể** tự thay đổi trạng thái tài khoản của chính mình.
 
+### Quản lý kho từ vựng (`/admin/vocabularies`)
+
+- Mỗi ngôn ngữ chỉ có **một** từ cho mỗi Word: hệ thống không cho tạo, sửa hay import một từ trùng với từ đã có (không phân biệt chữ hoa/thường, nhưng **có** phân biệt dấu — "ban" và "bạn" là hai từ khác nhau). Khoảng trắng thừa ở đầu/cuối Word được tự bỏ.
+- Nếu từ trùng đang ở trạng thái **Lưu trữ**, thông báo lỗi sẽ cho biết mã (id) của từ đó — hãy mở từ đó và chuyển về **Hoạt động** thay vì tạo mới.
+- Từ **đang được dùng trong bài học**:
+  - **Không đổi được ngôn ngữ** — hãy gỡ từ khỏi các bài học được liệt kê trong thông báo trước.
+  - Khi chuyển sang **Lưu trữ**, hệ thống hiện hộp xác nhận kèm danh sách bài học bị ảnh hưởng. Sau khi lưu trữ, học viên không còn thấy từ đó trong các bài học này (liên kết vẫn được giữ — chuyển từ về Hoạt động là học viên thấy lại).
+
 ### Thêm từ vựng vào Bài học (`/admin/lessons/:id`)
 
-Trong trang chi tiết 1 Bài học, phần **"Từ vựng"** có 2 cách thêm từ:
+Trong trang chi tiết 1 Bài học, phần **"Từ vựng"** có 2 cách thêm từ (từ nào đã gắn nhưng sau đó bị lưu trữ, đổi ngôn ngữ hoặc bị xoá sẽ hiện nhãn cảnh báo màu đỏ "… — học viên không thấy" để bạn gỡ hoặc khôi phục):
 
 - **Gắn từ vựng** — tìm và gắn từng từ có sẵn trong kho. Ô tìm kiếm chỉ hiện từ đúng ngôn ngữ của khoá học chứa bài học đó.
 - **Import CSV/Excel** — thêm nhiều từ cùng lúc từ 1 file:
