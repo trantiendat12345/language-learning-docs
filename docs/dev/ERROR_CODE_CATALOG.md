@@ -81,6 +81,8 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 |---|---|---|
 | `DUPLICATE_RESOURCE` (dùng chung, không tạo `DECK_CARD_ALREADY_EXISTS` riêng) | 409 | TC-DECK-009 — thêm trùng 1 từ vào cùng Deck, `DeckServiceImpl.addCard` ném `DuplicateResourceException` với message riêng, giữ nguyên errorCode chung |
 | `RESOURCE_NOT_FOUND` (dùng chung, không tạo `DECK_CLONE_SOURCE_NOT_PUBLIC` riêng) | 404 | TC-DECK-019 — clone Deck Private của người khác, `DeckServiceImpl.cloneDeck` ném `ResourceNotFoundException` (cùng quy tắc "không tiết lộ tồn tại" như GET) |
+| `RESOURCE_NOT_FOUND` (dùng chung) | 404 | TC-DECK-026/027 (2026-10-17) — `POST /api/decks/{id}/cards` với `vocabularyId` là Vocabulary custom của User khác hoặc Vocabulary hệ thống `ARCHIVED`: `DeckServiceImpl.findAddableVocabulary` ném `ResourceNotFoundException` (không tiết lộ tồn tại, cùng quy tắc API public `GET /api/vocabularies/{id}`) |
+| `BAD_REQUEST` (dùng chung message riêng `ErrorMessage.DECK_VOCABULARY_LANGUAGE_MISMATCH`) | 400 | TC-DECK-028 (2026-10-17) — `vocabularyId` khác ngôn ngữ với Deck |
 
 ### Admin User Management (Giai đoạn 9 — đã implement, không dùng errorCode riêng)
 
@@ -94,6 +96,7 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 |---|---|---|
 | `RESOURCE_NOT_FOUND` (dùng chung) | 404 | TC-ADMIN-LESSON-VOCAB-002 — `POST /api/admin/lessons/{lessonId}/vocabularies` với `vocabularyId` là Vocabulary custom của User: `LessonServiceImpl.attachVocabularyToLesson` ném `ResourceNotFoundException` (không tiết lộ tồn tại, cùng quy tắc V64 ở `VocabularyServiceImpl.findVocabularyOrThrow`) |
 | `BAD_REQUEST` (dùng chung message riêng `ErrorMessage.LESSON_VOCABULARY_LANGUAGE_MISMATCH`) | 400 | TC-ADMIN-LESSON-VOCAB-003 — Vocabulary khác ngôn ngữ với Course chứa Lesson |
+| `BAD_REQUEST` (dùng chung message riêng `ErrorMessage.LESSON_VOCABULARY_ARCHIVED`) | 400 | TC-ADMIN-LESSON-VOCAB-013 (2026-10-17) — gắn Vocabulary hệ thống `ARCHIVED` vào Lesson. Dùng 400 (không ẩn bằng 404) vì Admin vẫn thấy từ ARCHIVED ở màn quản trị. Cùng message này là lỗi dòng khi Import vào Lesson gặp từ chỉ còn bản ARCHIVED (TC-ADMIN-LESSON-VOCAB-014) |
 | `DUPLICATE_RESOURCE` (dùng chung message riêng `ErrorMessage.LESSON_VOCABULARY_ALREADY_ATTACHED`) | 409 | Gắn trùng 1 từ vào cùng Lesson (đã có từ Chunk B Admin, nay message chuyển vào `ErrorMessage`) |
 
 ### Import CSV/Excel (Vocabulary hệ thống + Deck Card + Lesson Vocabulary — không dùng errorCode riêng)
@@ -103,7 +106,9 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 | `BAD_REQUEST` (dùng chung message riêng `ErrorMessage.IMPORT_FILE_TOO_LARGE`) | 400 | File Import vượt `spring.servlet.multipart.max-file-size` (5MB) — `GlobalExceptionHandler.handleMaxUploadSizeExceededException` bắt `MaxUploadSizeExceededException` (Spring ném trước khi vào tới Controller) |
 | `BAD_REQUEST` (dùng chung message riêng theo từng lỗi cụ thể) | 400 | Không chọn file/file rỗng (`ErrorMessage.IMPORT_FILE_REQUIRED`), sai đuôi file (`IMPORT_INVALID_CSV_EXTENSION`/`IMPORT_INVALID_EXCEL_EXTENSION`), file không có dữ liệu, sai header/không đúng Template, vượt quá 5.000 dòng — đều do `VocabularyImportFileReader` ném `BadRequestException` (từ 2026-10-12 phần kiểm tra file upload gộp vào đây, dùng chung cho cả 3 luồng Vocabulary/Deck/Lesson) |
 
-> Lỗi validate theo từng dòng dữ liệu (thiếu Word/Meaning, trùng trong file, trùng với dữ liệu đã có, từ đã gắn sẵn trong Lesson...) **không** đi qua cơ chế exception/`ApiErrorResponse` — trả về bình thường (HTTP 200) qua `ApiResponse<ImportResult>`, `ImportResult.errors[]` liệt kê đủ theo dòng (`row`/`column`/`message`), `ImportResult.success=false` và không lưu dữ liệu nào (all-or-nothing).
+> **Cảnh báo theo dòng (2026-10-17)** — Import vào Lesson (Admin) và Deck (User) khi 1 dòng tái sử dụng từ đã có nhưng Meaning trong file khác Meaning hiện tại: **không phải lỗi**, không có errorCode, không chặn Import, không sửa dữ liệu — trả trong `ImportResult.warnings[]` (`row`/`word`/`fileMeaning`/`currentMeaning`). Admin Import vào kho hệ thống **không** có cảnh báo này: trùng Word + ngôn ngữ (kể cả với từ ARCHIVED) vẫn luôn là lỗi duplicate.
+
+> Lỗi validate theo từng dòng dữ liệu (thiếu Word/Meaning, trùng trong file, trùng với dữ liệu đã có, từ đã gắn sẵn trong Lesson, từ chỉ còn bản ARCHIVED khi Import vào Lesson...) **không** đi qua cơ chế exception/`ApiErrorResponse` — trả về bình thường (HTTP 200) qua `ApiResponse<ImportResult>`, `ImportResult.errors[]` liệt kê đủ theo dòng (`row`/`column`/`message`), `ImportResult.success=false` và không lưu dữ liệu nào (all-or-nothing).
 
 > **Quy tắc bổ sung dòng mới:** khi implement 1 module và cần 1 error code chưa có trong bảng, thêm ngay vào đây trong cùng commit — không để `errorCode` "trôi nổi" chỉ tồn tại trong code.
 

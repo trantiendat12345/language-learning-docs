@@ -75,3 +75,19 @@
 | TC-DECK-023 | Học Flashcard — chế độ Shuffle | Cùng deck, học 2 lượt liên tiếp | Chọn Shuffle | | Thứ tự thẻ khác nhau giữa 2 lượt (xác suất cao, không cố định) | Medium |
 | TC-DECK-024 | Đánh giá Flashcard — Good | Từ chưa có UserVocabularyProgress | Học flashcard, chọn "Good" | | Tạo mới `UserVocabularyProgress`, `nextReviewDate` được set theo interval mặc định (xem `15_FRS_TC_SRS_REVIEW.md`) | Critical |
 | TC-DECK-025 | Deck rỗng — trạng thái Empty State | Deck mới tạo, chưa có từ nào | Vào học Flashcard | | Hiển thị Empty State rõ ràng, không lỗi trắng trang/500 | Medium |
+
+### 3.x Bổ sung 2026-10-17 — Thêm từ có sẵn bằng `vocabularyId` (bảo mật) + Import CSV/Excel vào Deck
+
+> **Trạng thái implement (2026-10-17):** đã code + Unit Test (`DeckServiceImplTest`), chưa chạy thủ công. TC-DECK-026 là lỗ hổng thật phát hiện khi review (mọi User đã đăng nhập đọc được từ custom của người khác qua response `addCard`) — xem `31_SECURITY_CHECKLIST.md` mục 8.
+
+| ID | Tiêu đề | Precondition | Steps | Test Data | Expected Result | Priority |
+|---|---|---|---|---|---|---|
+| TC-DECK-026 | Không thêm được từ custom của User khác bằng vocabularyId | user02 có từ custom "secret" (tạo qua Deck của user02) | user01 `POST /api/decks/{deckUser01}/cards` | vocabularyId = id từ "secret" | 404, response **không** chứa Word/Meaning của user02, không tạo DeckCard | Critical |
+| TC-DECK-027 | Không thêm được từ hệ thống ARCHIVED bằng vocabularyId | Từ hệ thống "oldword" status=ARCHIVED | `POST /api/decks/{id}/cards` | vocabularyId = id "oldword" | 404 (cùng quy tắc API public ẩn ARCHIVED) | High |
+| TC-DECK-028 | Không thêm được từ khác ngôn ngữ Deck | Deck tiếng Anh, từ hệ thống tiếng Nhật | `POST /api/decks/{id}/cards` | vocabularyId = id từ tiếng Nhật | 400, message "Từ vựng không cùng ngôn ngữ với Deck này" | High |
+| TC-DECK-029 | Thêm được từ custom của chính mình bằng vocabularyId | user01 có từ custom "mine" | `POST /api/decks/{deckUser01}/cards` | vocabularyId = id "mine" | 200 | Medium |
+| TC-DECK-030 | Import CSV vào Deck của chính mình | Deck user01 | Import file gồm 1 từ hệ thống có sẵn, 1 từ custom có sẵn của user01, 1 từ mới | | `success=true`; 2 từ có sẵn được tái sử dụng (không tạo bản mới), từ mới tạo `Vocabulary(owner=user01)`; thứ tự thẻ nối tiếp | High |
+| TC-DECK-031 | Không import được vào Deck của người khác | Deck của user01 (kể cả PUBLIC) | user02 import CSV | | 403 `OWNERSHIP_VIOLATION`, không lưu gì | Critical |
+| TC-DECK-032 | Import gặp từ hệ thống ARCHIVED | "oldword" ARCHIVED, user01 chưa có từ custom "oldword" | Import "oldword" | | `success=true`, tạo từ custom "oldword" của user01 (coi như từ hệ thống không tồn tại), không đổi status bản ARCHIVED | Medium |
+| TC-DECK-033 | Import file nhiều lỗi — all-or-nothing | Deck đã có "family" | Import: dòng thiếu Meaning + "family" + 1 từ hợp lệ + dòng trùng Word trong file | | `success=false`, đủ lỗi theo dòng, không lưu dòng nào kể cả dòng hợp lệ | High |
+| TC-DECK-034 | Cảnh báo nghĩa khác, không ghi đè | "family" hệ thống meaning "gia đình" | Import "family,mái ấm" | | `success=true`, có cảnh báo (file "mái ấm" / hiện có "gia đình"), meaning trong DB không đổi | Medium |

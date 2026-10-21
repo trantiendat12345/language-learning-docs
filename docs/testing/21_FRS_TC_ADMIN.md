@@ -113,7 +113,7 @@ Toàn bộ endpoint `/api/admin/**` áp dụng chung các quy tắc sau (áp d�
 
 **Quy tắc:** Lesson là nội dung chung cho mọi học viên → chỉ được gắn Vocabulary **hệ thống** (`owner=null`) **cùng ngôn ngữ** với Course chứa Lesson. Import: mỗi dòng khớp Vocabulary hệ thống cùng Word (không phân biệt hoa/thường) + cùng ngôn ngữ → chỉ gắn từ cũ, không ghi đè nội dung; chưa có → tạo Vocabulary hệ thống mới rồi gắn. Có lỗi ở bất kỳ dòng nào → không lưu gì (all-or-nothing), lỗi trả về theo dòng trong `ImportResult.errors` (HTTP 200, `success=false`).
 
-> **Trạng thái implement (2026-10-12):** đã code + Unit Test (`LessonServiceImplTest`), chưa chạy thủ công bằng tài khoản Admin thật.
+> **Trạng thái implement:** 001 → 012 code + Unit Test 2026-10-12, 013 → 017 + VOCAB-IMPORT-001 bổ sung 2026-10-17 (`LessonServiceImplTest`, `VocabularyServiceImplTest`) — chưa chạy thủ công bằng tài khoản Admin thật.
 
 | ID | Tiêu đề | Precondition | Steps | Expected Result | Priority |
 |---|---|---|---|---|---|
@@ -129,3 +129,9 @@ Toàn bộ endpoint `/api/admin/**` áp dụng chung các quy tắc sau (áp d�
 | TC-ADMIN-LESSON-VOCAB-010 | Thứ tự hiển thị sau import | Lesson đã có từ với `displayOrder` lớn nhất = 4 | Import 2 từ | 2 từ mới có `displayOrder` 5, 6 theo đúng thứ tự trong file | Medium |
 | TC-ADMIN-LESSON-VOCAB-011 | Danh sách tự cập nhật sau import | | Import thành công trên giao diện | Danh sách "Từ vựng (n)" tự cập nhật, không cần F5 | Medium |
 | TC-ADMIN-LESSON-VOCAB-012 | USER thường gọi API import | Đăng nhập user01 | `POST .../lessons/{id}/vocabularies/import/csv` | 403 Forbidden | Critical |
+| TC-ADMIN-LESSON-VOCAB-013 | Không gắn được từ ARCHIVED (bổ sung 2026-10-17) | Từ hệ thống "oldword" status=ARCHIVED, cùng ngôn ngữ Course | `POST .../lessons/{id}/vocabularies` | 400 `BAD_REQUEST`, message "Từ vựng trong kho hệ thống đang ở trạng thái lưu trữ (ARCHIVED)..."; status của từ vẫn ARCHIVED | High |
+| TC-ADMIN-LESSON-VOCAB-014 | Import gặp từ chỉ còn bản ARCHIVED | Như trên, kho không có "oldword" ACTIVE | Import CSV "oldword" + 1 từ mới hợp lệ | `success=false`, lỗi đúng dòng "oldword" cột Word; không lưu dòng nào; không tạo thêm "oldword" mới, không đổi status bản ARCHIVED | High |
+| TC-ADMIN-LESSON-VOCAB-015 | Cảnh báo nghĩa khác | "apple" ACTIVE meaning "quả táo", chưa gắn | Import CSV "apple,trái táo" | `success=true`; `warnings` có 1 dòng (Word "apple", file "trái táo", hiện có "quả táo"); giao diện hiện bảng cảnh báo; meaning trong DB vẫn "quả táo" | High |
+| TC-ADMIN-LESSON-VOCAB-016 | Cảnh báo + lỗi cùng lúc vẫn all-or-nothing | | Import file có 1 dòng khác nghĩa + 1 dòng thiếu Meaning | `success=false`, trả cả lỗi lẫn cảnh báo, không lưu dòng nào | Medium |
+| TC-ADMIN-LESSON-VOCAB-017 | Khác hoa/thường hoặc khoảng trắng không coi là khác nghĩa | "apple" meaning "quả táo" | Import "apple,  Quả   TÁO " | Không có cảnh báo | Low |
+| TC-ADMIN-VOCAB-IMPORT-001 | Admin Import vào kho: trùng từ ARCHIVED vẫn là lỗi duplicate | "oldword" ARCHIVED trong kho hệ thống | `/admin/vocabularies` Import "oldword" | Lỗi dòng "Word đã tồn tại trong kho hệ thống", không tạo bản mới, không tự kích hoạt lại; không có cảnh báo khác nghĩa ở luồng này | High |

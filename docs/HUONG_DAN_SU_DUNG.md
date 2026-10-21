@@ -140,6 +140,7 @@ Bấm **"Tạo Deck mới"** để tạo bộ thẻ của riêng bạn: đặt t
 
 - Xem danh sách toàn bộ thẻ (từ + nghĩa) trong Deck.
 - Nếu bạn là **chủ sở hữu** Deck: có thể **Sửa thông tin Deck**, **Xoá Deck**, **Thêm từ mới** vào Deck (nhập từ + nghĩa, có thể kèm phiên âm/ảnh), và **xoá từng thẻ**.
+- Chủ sở hữu cũng có thể **Import CSV/Excel** để thêm nhiều thẻ cùng lúc (tải Template ngay trong khung Import). Từ đã có sẵn trong hệ thống hoặc trong kho từ riêng của bạn sẽ được dùng lại, không tạo trùng; nếu nghĩa bạn ghi trong file khác nghĩa có sẵn, kết quả import hiện bảng **cảnh báo** để bạn đối chiếu (nghĩa có sẵn được giữ nguyên). File có bất kỳ dòng lỗi nào thì không dòng nào được lưu.
 - Nếu Deck là của người khác và đang **Công khai**: có nút **"Nhân bản Deck"** — tạo một bản sao riêng của Deck đó vào tài khoản bạn (bản sao luôn ở chế độ Riêng tư), để bạn có thể tự học và tuỳ chỉnh mà không ảnh hưởng tới Deck gốc.
 - Nút **"Học Flashcard"** — bắt đầu học bộ thẻ này (chỉ bật khi Deck có ít nhất 1 thẻ).
 
@@ -231,7 +232,8 @@ Trong trang chi tiết 1 Bài học, phần **"Từ vựng"** có 2 cách thêm 
   1. Bấm **"Import CSV/Excel"**, chọn định dạng, bấm **"Tải Template"** để lấy file mẫu (6 cột: Word, Meaning, IPA, Word Type, Example, Example Translation — không đổi tên cột).
   2. Điền từ vựng vào file, kéo thả hoặc chọn file rồi bấm **"Xác nhận Import"**.
   3. Với mỗi dòng: nếu từ **chưa có** trong kho từ vựng của ngôn ngữ đó, hệ thống tạo từ mới rồi gắn vào bài học; nếu từ **đã có** (so theo Word, không phân biệt hoa/thường), hệ thống chỉ gắn từ có sẵn vào bài học — **không tạo từ trùng và không sửa nghĩa của từ cũ** (muốn sửa nghĩa, vào trang **Từ vựng** để sửa).
-  4. Nếu file có bất kỳ dòng nào lỗi (thiếu Word/Meaning, trùng Word trong file, từ đã có sẵn trong bài học...), **không dòng nào được lưu** — sửa đúng các dòng được báo lỗi rồi import lại.
+  4. Nếu file có bất kỳ dòng nào lỗi (thiếu Word/Meaning, trùng Word trong file, từ đã có sẵn trong bài học, từ trong kho đang ở trạng thái **Lưu trữ (ARCHIVED)**...), **không dòng nào được lưu** — sửa đúng các dòng được báo lỗi rồi import lại. Từ đang lưu trữ không được gắn vào bài học; muốn dùng lại, vào trang **Từ vựng** chuyển từ đó về trạng thái hoạt động trước.
+  5. Nếu nghĩa bạn ghi trong file **khác** nghĩa hiện có của từ trong kho, kết quả import hiện thêm bảng **cảnh báo** (Word, nghĩa trong file, nghĩa hiện có) để bạn đối chiếu. Cảnh báo không chặn import và hệ thống **không tự sửa** nghĩa trong kho.
 
 ---
 
