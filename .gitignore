@@ -6,3 +6,6 @@ language-learning-client/
 
 # Log runtime của start-demo.sh - không commit
 .demo-logs/
+
+# Secret production - không commit (chỉ .env.production.example được commit)
+.env.production

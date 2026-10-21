@@ -1,0 +1,51 @@
+# Dùng cho deploy production trên VM (xem docs/dev/DEPLOYMENT.md).
+# Backend + MySQL chạy container; frontend build ra file tĩnh (service "frontend-build" chạy 1
+# lần rồi thoát) để Nginx cài trực tiếp trên host serve + reverse proxy /api sang backend.
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-language_learning}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./language-learning-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-language_learning}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
+      SERVER_PORT: 8080
+      FRONTEND_URL: ${FRONTEND_URL}
+      COOKIE_SECURE: "true"
+    ports:
+      # Chỉ bind localhost - Nginx là cửa duy nhất nhận traffic từ ngoài.
+      - "127.0.0.1:8080:8080"
+
+  frontend-build:
+    image: node:22
+    working_dir: /app
+    volumes:
+      - ./language-learning-client:/app
+    command: sh -c "npm ci && npm run build"
+    profiles:
+      - build
+
+volumes:
+  mysql_data:
