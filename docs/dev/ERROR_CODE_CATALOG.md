@@ -88,14 +88,22 @@ Dùng khi 1 HTTP status có nhiều nguyên nhân khác nhau mà FE cần phân 
 |---|---|---|
 | `BAD_REQUEST` (dùng chung message riêng, không tạo errorCode mới) | 400 | TC-ADMIN-026 — Admin tự `disable`/`lock` chính tài khoản ADMIN của mình, `AdminUserServiceImpl.requireNotSelf` ném `BadRequestException` (tránh tự khoá bản thân ra khỏi hệ thống) |
 
-### Import CSV/Excel (Vocabulary hệ thống + Deck Card — không dùng errorCode riêng)
+### Lesson Vocabulary — Admin gắn/import từ vựng vào Lesson (2026-10-12, không dùng errorCode riêng)
+
+| `errorCode` | HTTP `code` | Test Case liên quan |
+|---|---|---|
+| `RESOURCE_NOT_FOUND` (dùng chung) | 404 | TC-ADMIN-LESSON-VOCAB-002 — `POST /api/admin/lessons/{lessonId}/vocabularies` với `vocabularyId` là Vocabulary custom của User: `LessonServiceImpl.attachVocabularyToLesson` ném `ResourceNotFoundException` (không tiết lộ tồn tại, cùng quy tắc V64 ở `VocabularyServiceImpl.findVocabularyOrThrow`) |
+| `BAD_REQUEST` (dùng chung message riêng `ErrorMessage.LESSON_VOCABULARY_LANGUAGE_MISMATCH`) | 400 | TC-ADMIN-LESSON-VOCAB-003 — Vocabulary khác ngôn ngữ với Course chứa Lesson |
+| `DUPLICATE_RESOURCE` (dùng chung message riêng `ErrorMessage.LESSON_VOCABULARY_ALREADY_ATTACHED`) | 409 | Gắn trùng 1 từ vào cùng Lesson (đã có từ Chunk B Admin, nay message chuyển vào `ErrorMessage`) |
+
+### Import CSV/Excel (Vocabulary hệ thống + Deck Card + Lesson Vocabulary — không dùng errorCode riêng)
 
 | `errorCode` | HTTP `code` | Test Case liên quan |
 |---|---|---|
 | `BAD_REQUEST` (dùng chung message riêng `ErrorMessage.IMPORT_FILE_TOO_LARGE`) | 400 | File Import vượt `spring.servlet.multipart.max-file-size` (5MB) — `GlobalExceptionHandler.handleMaxUploadSizeExceededException` bắt `MaxUploadSizeExceededException` (Spring ném trước khi vào tới Controller) |
-| `BAD_REQUEST` (dùng chung message riêng theo từng lỗi cụ thể) | 400 | Sai định dạng file (không phải `.csv`/`.xlsx`), file rỗng, sai header/không đúng Template, vượt quá 5.000 dòng — `VocabularyServiceImpl`/`DeckServiceImpl`/`VocabularyImportFileReader` ném `BadRequestException` với message riêng cho từng trường hợp |
+| `BAD_REQUEST` (dùng chung message riêng theo từng lỗi cụ thể) | 400 | Không chọn file/file rỗng (`ErrorMessage.IMPORT_FILE_REQUIRED`), sai đuôi file (`IMPORT_INVALID_CSV_EXTENSION`/`IMPORT_INVALID_EXCEL_EXTENSION`), file không có dữ liệu, sai header/không đúng Template, vượt quá 5.000 dòng — đều do `VocabularyImportFileReader` ném `BadRequestException` (từ 2026-10-12 phần kiểm tra file upload gộp vào đây, dùng chung cho cả 3 luồng Vocabulary/Deck/Lesson) |
 
-> Lỗi validate theo từng dòng dữ liệu (thiếu Word/Meaning, trùng trong file, trùng với dữ liệu đã có...) **không** đi qua cơ chế exception/`ApiErrorResponse` — trả về bình thường (HTTP 200) qua `ApiResponse<ImportResult>`, `ImportResult.errors[]` liệt kê đủ theo dòng (`row`/`column`/`message`), `ImportResult.success=false` và không lưu dữ liệu nào (all-or-nothing).
+> Lỗi validate theo từng dòng dữ liệu (thiếu Word/Meaning, trùng trong file, trùng với dữ liệu đã có, từ đã gắn sẵn trong Lesson...) **không** đi qua cơ chế exception/`ApiErrorResponse` — trả về bình thường (HTTP 200) qua `ApiResponse<ImportResult>`, `ImportResult.errors[]` liệt kê đủ theo dòng (`row`/`column`/`message`), `ImportResult.success=false` và không lưu dữ liệu nào (all-or-nothing).
 
 > **Quy tắc bổ sung dòng mới:** khi implement 1 module và cần 1 error code chưa có trong bảng, thêm ngay vào đây trong cùng commit — không để `errorCode` "trôi nổi" chỉ tồn tại trong code.
 

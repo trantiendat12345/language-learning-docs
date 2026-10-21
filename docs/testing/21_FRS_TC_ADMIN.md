@@ -106,3 +106,26 @@ Toàn bộ endpoint `/api/admin/**` áp dụng chung các quy tắc sau (áp d�
 | TC-ADMIN-029 | Dashboard hiển thị đúng Total Courses | | | Số liệu khớp, loại trừ Course đã soft-delete | High |
 | TC-ADMIN-030 | Dashboard không truy cập được bởi USER | Đăng nhập user01 | `GET /api/admin/dashboard` | 403 Forbidden | Critical |
 | TC-ADMIN-031 | Dashboard cập nhật sau khi có dữ liệu mới | Tạo thêm 1 Course mới | Xem lại Dashboard | Total Courses tăng +1 | Medium |
+
+### 3.5 Gắn / Import Từ vựng vào Lesson (bổ sung 2026-10-12)
+
+**API:** `POST /api/admin/lessons/{lessonId}/vocabularies` (gắn 1 từ), `POST /api/admin/lessons/{lessonId}/vocabularies/import/{csv|excel}` (multipart `file`, Template dùng chung `GET /api/admin/vocabularies/template/{csv|excel}`).
+
+**Quy tắc:** Lesson là nội dung chung cho mọi học viên → chỉ được gắn Vocabulary **hệ thống** (`owner=null`) **cùng ngôn ngữ** với Course chứa Lesson. Import: mỗi dòng khớp Vocabulary hệ thống cùng Word (không phân biệt hoa/thường) + cùng ngôn ngữ → chỉ gắn từ cũ, không ghi đè nội dung; chưa có → tạo Vocabulary hệ thống mới rồi gắn. Có lỗi ở bất kỳ dòng nào → không lưu gì (all-or-nothing), lỗi trả về theo dòng trong `ImportResult.errors` (HTTP 200, `success=false`).
+
+> **Trạng thái implement (2026-10-12):** đã code + Unit Test (`LessonServiceImplTest`), chưa chạy thủ công bằng tài khoản Admin thật.
+
+| ID | Tiêu đề | Precondition | Steps | Expected Result | Priority |
+|---|---|---|---|---|---|
+| TC-ADMIN-LESSON-VOCAB-001 | Gắn từ hệ thống cùng ngôn ngữ | Lesson thuộc Course tiếng Anh, từ "apple" hệ thống tiếng Anh | `POST .../lessons/{id}/vocabularies` `{vocabularyId}` | 200, từ xuất hiện trong `GET /api/admin/lessons/{id}` | High |
+| TC-ADMIN-LESSON-VOCAB-002 | Không gắn được Vocabulary custom của User | "my_custom_word" thuộc user01 (tạo qua Deck) | Admin `POST .../lessons/{id}/vocabularies` với id của từ đó | 404 `RESOURCE_NOT_FOUND` (không tiết lộ tồn tại), Lesson không đổi | Critical |
+| TC-ADMIN-LESSON-VOCAB-003 | Không gắn được từ khác ngôn ngữ | Lesson thuộc Course tiếng Nhật, từ "apple" tiếng Anh | `POST .../lessons/{id}/vocabularies` | 400 `BAD_REQUEST`, message "Từ vựng không cùng ngôn ngữ với Khoá học chứa Lesson này" | High |
+| TC-ADMIN-LESSON-VOCAB-004 | Ô tìm kiếm chỉ hiện từ đúng ngôn ngữ | Kho có từ tiếng Anh + tiếng Nhật | Mở `/admin/lessons/{id}` của Course tiếng Nhật → "Gắn từ vựng" → tìm từ khoá chung | Chỉ hiện từ tiếng Nhật | Medium |
+| TC-ADMIN-LESSON-VOCAB-005 | Import từ chưa có trong hệ thống | "orange" chưa có trong kho | Import CSV 1 dòng "orange" | `success=true`, `importedCount=1`; DB có thêm 1 Vocabulary `owner_id=NULL`, đúng `language_id` của Course; 1 dòng `lesson_vocabulary` mới | Critical |
+| TC-ADMIN-LESSON-VOCAB-006 | Import từ đã có — không tạo trùng, không ghi đè | "apple" (meaning "quả táo") đã có trong kho, chưa gắn vào Lesson | Import CSV dòng "Apple" với meaning khác | `success=true`; số Vocabulary "apple" trong DB không đổi (vẫn 1), meaning vẫn "quả táo"; Lesson có thêm "apple" | Critical |
+| TC-ADMIN-LESSON-VOCAB-007 | Import từ đã gắn sẵn trong Lesson | "apple" đã gắn vào Lesson | Import CSV gồm "apple" + 1 từ mới hợp lệ | `success=false`, `importedCount=0`, lỗi đúng dòng "apple" cột Word "Từ vựng đã được gắn vào Lesson này"; từ mới hợp lệ **không** được lưu | High |
+| TC-ADMIN-LESSON-VOCAB-008 | Import không dùng lại từ custom của User | user01 có từ custom "serendipity", kho hệ thống chưa có | Import CSV dòng "serendipity" | Tạo Vocabulary hệ thống mới (`owner_id=NULL`), từ custom của user01 không bị gắn vào Lesson | Critical |
+| TC-ADMIN-LESSON-VOCAB-009 | Import file lỗi format + trùng trong file | | File có dòng thiếu Meaning + 2 dòng trùng Word | `success=false`, đủ lỗi theo dòng, không lưu bản ghi nào | High |
+| TC-ADMIN-LESSON-VOCAB-010 | Thứ tự hiển thị sau import | Lesson đã có từ với `displayOrder` lớn nhất = 4 | Import 2 từ | 2 từ mới có `displayOrder` 5, 6 theo đúng thứ tự trong file | Medium |
+| TC-ADMIN-LESSON-VOCAB-011 | Danh sách tự cập nhật sau import | | Import thành công trên giao diện | Danh sách "Từ vựng (n)" tự cập nhật, không cần F5 | Medium |
+| TC-ADMIN-LESSON-VOCAB-012 | USER thường gọi API import | Đăng nhập user01 | `POST .../lessons/{id}/vocabularies/import/csv` | 403 Forbidden | Critical |

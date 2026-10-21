@@ -222,6 +222,17 @@ Số liệu tổng quan toàn hệ thống: tổng số người dùng, số ng�
 - Thao tác trạng thái tài khoản: **Vô hiệu hoá**, **Khoá**, hoặc **Kích hoạt lại** — người dùng bị vô hiệu hoá/khoá sẽ bị đăng xuất ngay lập tức và không đăng nhập lại được cho tới khi Admin kích hoạt lại.
 - Vì lý do an toàn, Admin **không thể** tự thay đổi trạng thái tài khoản của chính mình.
 
+### Thêm từ vựng vào Bài học (`/admin/lessons/:id`)
+
+Trong trang chi tiết 1 Bài học, phần **"Từ vựng"** có 2 cách thêm từ:
+
+- **Gắn từ vựng** — tìm và gắn từng từ có sẵn trong kho. Ô tìm kiếm chỉ hiện từ đúng ngôn ngữ của khoá học chứa bài học đó.
+- **Import CSV/Excel** — thêm nhiều từ cùng lúc từ 1 file:
+  1. Bấm **"Import CSV/Excel"**, chọn định dạng, bấm **"Tải Template"** để lấy file mẫu (6 cột: Word, Meaning, IPA, Word Type, Example, Example Translation — không đổi tên cột).
+  2. Điền từ vựng vào file, kéo thả hoặc chọn file rồi bấm **"Xác nhận Import"**.
+  3. Với mỗi dòng: nếu từ **chưa có** trong kho từ vựng của ngôn ngữ đó, hệ thống tạo từ mới rồi gắn vào bài học; nếu từ **đã có** (so theo Word, không phân biệt hoa/thường), hệ thống chỉ gắn từ có sẵn vào bài học — **không tạo từ trùng và không sửa nghĩa của từ cũ** (muốn sửa nghĩa, vào trang **Từ vựng** để sửa).
+  4. Nếu file có bất kỳ dòng nào lỗi (thiếu Word/Meaning, trùng Word trong file, từ đã có sẵn trong bài học...), **không dòng nào được lưu** — sửa đúng các dòng được báo lỗi rồi import lại.
+
 ---
 
 ## 14. Câu hỏi thường gặp
